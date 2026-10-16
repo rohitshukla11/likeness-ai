@@ -1,7 +1,0 @@
-allowBuilds:
-  # Restores the symlinks inside the bundled PostgreSQL binaries (local run without Docker).
-  "@embedded-postgres/darwin-arm64": true
-  "@embedded-postgres/darwin-x64": true
-  "@embedded-postgres/linux-x64": true
-  "@embedded-postgres/linux-arm64": true
-  esbuild: false
