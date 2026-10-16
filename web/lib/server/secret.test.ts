@@ -3,7 +3,6 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadKey } from "./keys";
 import { secretText } from "./secret";
 
 const KEY = `0x${"ab".repeat(32)}`;
@@ -32,18 +31,5 @@ describe("secretText", () => {
   it("is null, not a throw, when a named file is missing (a host without ../.secrets)", () => {
     process.env.T_FILE = "/no/such/file";
     expect(secretText("T_PEM", "T_FILE", "/also/missing")).toBeNull();
-  });
-});
-
-describe("loadKey", () => {
-  it("reads a private key from its value when the file is absent", () => {
-    process.env.K_FILE = "/no/such/file";
-    process.env.K_VALUE = KEY;
-    expect(loadKey("K_FILE", "K_VALUE")).toBe(KEY);
-  });
-
-  it("rejects anything that is not a 32-byte hex key", () => {
-    process.env.K_VALUE = "0x1234";
-    expect(loadKey("K_FILE", "K_VALUE")).toBeUndefined();
   });
 });

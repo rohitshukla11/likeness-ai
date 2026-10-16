@@ -1,28 +1,13 @@
-import type { NextRequest } from "next/server";
-import type { SignedAction } from "@/lib/auth";
-import { verifyAction } from "@/lib/server/auth";
-import { publicRecord, rendersFor } from "@/lib/server/generate";
-import { address, fail, json } from "@/lib/server/http";
+import { firestore } from "@/lib/server/firebase-admin";
+import { authed } from "@/lib/server/route";
+import type { RenderDoc } from "@/lib/server/render-image";
 
-/** Renders for a brand or a licence, without download links. */
-export async function GET(req: NextRequest) {
-  try {
-    const q = req.nextUrl.searchParams;
-    const rows = await rendersFor({ licensee: q.get("licensee") ? address(q.get("licensee"), "licensee") : undefined, licenceId: q.get("licence") ?? undefined });
-    return json({ renders: rows.map((r) => publicRecord(r, false)) });
-  } catch (e) {
-    return fail(e);
-  }
-}
-
-/** The brand's own renders with download links: signed "Likeness: list renders". */
-export async function POST(req: NextRequest) {
-  try {
-    const { licensee: raw, auth } = (await req.json().catch(() => ({}))) as { licensee?: string; auth?: SignedAction };
-    const licensee = address(raw, "licensee");
-    await verifyAction(auth, "list renders", licensee);
-    return json({ renders: (await rendersFor({ licensee })).map((r) => publicRecord(r, true)) });
-  } catch (e) {
-    return fail(e);
-  }
-}
+/** Renders I paid for (brand) or that used my likeness (creator). */
+export const GET = authed(async (_req, me) => {
+  const [b, c] = await Promise.all([
+    firestore().collection("renders").where("brandId", "==", me.uid).limit(100).get(),
+    firestore().collection("renders").where("creatorId", "==", me.uid).limit(100).get(),
+  ]);
+  const newest = (x: RenderDoc, y: RenderDoc) => y.createdAt - x.createdAt;
+  return { asBrand: b.docs.map((d) => d.data() as RenderDoc).sort(newest), asCreator: c.docs.map((d) => d.data() as RenderDoc).sort(newest) };
+});

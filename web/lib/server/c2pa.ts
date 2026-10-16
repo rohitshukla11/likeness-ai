@@ -3,13 +3,13 @@ import "server-only";
  * C2PA manifests for every render (@contentauth/c2pa-node 0.9.9, c2pa-rs underneath).
  *
  * Each output carries a signed manifest with:
- *  - c2pa.actions: "c2pa.created" by the model (or by the DevRenderer, marked as a test), with the
+ *  - c2pa.actions: "c2pa.created" by the model, with the
  *    IPTC digital source type for AI output;
  *  - c2pa.training-mining: AI training and mining not allowed;
- *  - xyz.likeness.licence: the licence id, chain, contracts, creator, licensee, render index and how
- *    to find the receipt. The receipt is keyed by sha256 of this exact file (manifest included), so
- *    the manifest says where to look it up rather than carrying a transaction hash that cannot exist
- *    before the file does.
+ *  - xyz.likeness.licence: the licence id, creator, licensee, use, render index and how to find the
+ *    receipt. The KMS-signed receipt is keyed by sha256 of this exact file (manifest included), so the
+ *    manifest says where to look it up rather than carrying a signature that cannot exist before the
+ *    file does.
  *
  * Signed with a TEST certificate chain (scripts/c2pa-testcert.sh). It is not on the C2PA trust list,
  * so validators report "signing certificate untrusted"; the verifier page says so plainly.
@@ -20,18 +20,15 @@ import { secretText } from "./secret";
 export const LICENCE_ASSERTION = "xyz.likeness.licence";
 
 export type LicenceAssertion = {
-  protocol: "likeness/1";
-  chainId: number;
+  protocol: "likeness-ai/1";
   licenceId: string;
   renderIndex: number;
-  creator: string;
-  licensee: string;
-  category: string;
-  licenceRegistry: string;
-  escrow: string;
-  receipt: { anchor: string; key: "sha256 of this file, manifest included"; lookup: string };
-  renderAgent: string;
-  renderer: { provider: string; model: string; test: boolean };
+  renderType: "image" | "video";
+  creator: { id: string; name: string; youtubeChannelId: string | null };
+  licensee: { id: string; name: string };
+  use: string;
+  receipt: { store: "Firestore receipts/{sha256}"; key: "sha256 of this file, manifest included"; signedBy: "Cloud KMS EC_SIGN_P256_SHA256"; verify: string };
+  renderer: { provider: string; model: string };
   promptSha256: string;
   createdAt: string;
 };
@@ -52,10 +49,10 @@ const SOURCE_TYPE = {
   test: "http://cv.iptc.org/newscodes/digitalsourcetype/compositeSynthetic",
 };
 
-export function embedManifest(bytes: Uint8Array, mime: "image/jpeg" | "image/png", a: LicenceAssertion): Uint8Array {
+export function embedManifest(bytes: Uint8Array, mime: "image/jpeg" | "image/png" | "video/mp4", a: LicenceAssertion): Uint8Array {
   const builder = Builder.withJson({
     claim_generator_info: [{ name: "Likeness render service", version: "0.1.0" }],
-    title: `likeness-licence-${a.licenceId}-render-${a.renderIndex}.${mime === "image/png" ? "png" : "jpg"}`,
+    title: `likeness-licence-${a.licenceId}-render-${a.renderIndex}.${mime === "image/png" ? "png" : mime === "video/mp4" ? "mp4" : "jpg"}`,
     format: mime,
     assertions: [
       {
@@ -64,8 +61,8 @@ export function embedManifest(bytes: Uint8Array, mime: "image/jpeg" | "image/png
           actions: [
             {
               action: "c2pa.created",
-              digitalSourceType: a.renderer.test ? SOURCE_TYPE.test : SOURCE_TYPE.model,
-              softwareAgent: { name: a.renderer.test ? "Likeness DevRenderer (TEST RENDER, no model)" : a.renderer.model },
+              digitalSourceType: SOURCE_TYPE.model,
+              softwareAgent: { name: a.renderer.model },
             },
           ],
         },

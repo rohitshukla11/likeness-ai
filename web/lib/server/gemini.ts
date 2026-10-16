@@ -1,23 +1,20 @@
 import "server-only";
 /**
- * Google Gemini API over REST (no SDK): one key, GEMINI_API_KEY, for both the renderer and the
- * prompt filter.
- *   POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent
- *   header x-goog-api-key. https://ai.google.dev/api/generate-content
- * generateContent rather than the newer Interactions API: it is still fully supported and does not store
- * requests (Interactions keeps them 55 days on paid keys unless store:false). Google's paid tier
- * still logs prompts for 55 days for abuse monitoring (https://ai.google.dev/gemini-api/docs/usage-policies).
- * Errors keep Google's own status and message, so a quota or billing problem reads as exactly that.
+ * Gemini on Vertex AI over REST, with the service account (no API key).
+ *   POST https://aiplatform.googleapis.com/v1/projects/{project}/locations/global/publishers/google/models/{model}:generateContent
+ * Models (Vertex model catalogue): gemini-nano-banana-2.1 for image generation and editing with
+ * reference photos (GA, global endpoint, up to 14 input images, person generation supported), and
+ * gemini-3.5-flash-lite for the prompt safety filter (GA). Errors keep Google's status and message.
  */
-
-const BASE = "https://generativelanguage.googleapis.com/v1beta";
+import { accessToken, gcp, requireProject } from "./gcp";
 
 export const geminiModels = {
-  // "Recommended for all new projects" on https://ai.google.dev/gemini-api/docs/image-generation;
-  // up to 4 character references, so the creator's 3 captures fit.
   image: () => process.env.GEMINI_IMAGE_MODEL || "gemini-nano-banana-2.1",
   filter: () => process.env.GEMINI_FILTER_MODEL || "gemini-3.5-flash-lite",
 };
+
+/** Vertex AI is usable when a project is configured (credentials are checked on first call). */
+export const vertexConfigured = () => !!gcp.project();
 
 export type GeminiPart = { text?: string; inlineData?: { mimeType: string; data: string }; thought?: boolean };
 export type GeminiResponse = {
@@ -36,23 +33,35 @@ export class GeminiError extends Error {
   }
 }
 
+/**
+ * Vertex AI uses dynamic shared quota: a 429 RESOURCE_EXHAUSTED (or a 503) can be transient, so retry
+ * with backoff (5, 15, 30 s) before giving up: a new project has a small per-minute image quota.
+ */
 export async function generateContent(model: string, body: unknown, timeoutMs = 120_000): Promise<GeminiResponse> {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new GeminiError(0, "NOT_CONFIGURED", "GEMINI_API_KEY is not set");
-  const r = await fetch(`${BASE}/models/${model}:generateContent`, {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await generateOnce(model, body, timeoutMs);
+    } catch (e) {
+      const retryable = e instanceof GeminiError && (e.httpStatus === 429 || e.httpStatus === 503);
+      if (!retryable || attempt >= 3) throw e;
+      await new Promise((r) => setTimeout(r, [5000, 15000, 30000][attempt]));
+    }
+  }
+}
+
+async function generateOnce(model: string, body: unknown, timeoutMs: number): Promise<GeminiResponse> {
+  const project = requireProject();
+  const url = `https://aiplatform.googleapis.com/v1/projects/${project}/locations/global/publishers/google/models/${model}:generateContent`;
+  const r = await fetch(url, {
     method: "POST",
-    headers: { "x-goog-api-key": key, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const j = (await r.json().catch(() => ({}))) as GeminiResponse & { error?: { code?: number; status?: string; message?: string } };
   if (!r.ok || j.error) {
     const status = j.error?.status ?? String(r.status);
-    let msg = `Gemini ${model}: HTTP ${r.status} ${status}: ${j.error?.message ?? "no message"}`;
-    if (r.status === 429 || status === "RESOURCE_EXHAUSTED")
-      msg += " (quota: image models may need billing on this key's Google Cloud project; AI Studio → Billing)";
-    if (status === "FAILED_PRECONDITION") msg += " (this region or project needs billing enabled for this model)";
-    throw new GeminiError(r.status, status, msg);
+    throw new GeminiError(r.status, status, `Gemini ${model}: HTTP ${r.status} ${status}: ${j.error?.message ?? "no message"}`);
   }
   return j;
 }

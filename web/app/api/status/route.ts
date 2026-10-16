@@ -1,8 +1,4 @@
-import { json } from "@/lib/server/http";
-import { integrations } from "@/lib/server/integrations";
-import { isLocalFork } from "@/lib/server/chain";
-import { verificationLevel } from "@/lib/server/didit";
+import { route } from "@/lib/server/route";
+import { statusChecks } from "@/lib/server/status";
 
-export async function GET() {
-  return json({ chain: isLocalFork() ? "local fork of Monad testnet" : "Monad testnet", verificationLevel: verificationLevel(), integrations: integrations() });
-}
+export const GET = route(async () => ({ service: "likeness-ai", checks: await statusChecks() }));

@@ -16,7 +16,7 @@ import { BUILT_ON, MEASUREMENTS, TESTIMONIALS } from "@/lib/site-content";
 
 
 const RIBBON_A = ["Advertising", "✳", "Social", "✳", "Editorial", "✳", "Entertainment", "✳", "Product", "✳"];
-const RIBBON_B = ["Approve", "✳", "Get paid per render", "✳", "Revoke any time", "✳", "Verified humans", "✳"];
+const RIBBON_B = ["Approve", "✳", "Get paid per render", "✳", "Revoke any time", "✳", "Verified by YouTube", "✳"];
 
 export function Landing() {
   return (
@@ -66,10 +66,10 @@ function Hero() {
           <a href="#how" className="py-3 text-ink no-underline hover:underline">
             How it works
           </a>
-          <Link href="/market" className="py-3 text-ink no-underline hover:underline">
+          <Link href="/creators" className="py-3 text-ink no-underline hover:underline">
             Creators
           </Link>
-          <Link href="/status#contracts" className="py-3 text-ink no-underline hover:underline">
+          <Link href="/status" className="py-3 text-ink no-underline hover:underline">
             For AI tools
           </Link>
           <Link href="/verify" className="py-3 text-ink no-underline hover:underline">
@@ -80,10 +80,10 @@ function Hero() {
           <Link href="/dashboard" className="hidden py-3 text-[14px] font-medium text-ink no-underline hover:underline sm:inline">
             Log in
           </Link>
-          <Link href="/brand/onboard" className={pillClass("outline-dark", "hidden px-5 text-[14px] sm:inline-flex")}>
+          <Link href="/start" className={pillClass("outline-dark", "hidden px-5 text-[14px] sm:inline-flex")}>
             License a face
           </Link>
-          <Link href="/onboard" className={pillClass("ink", "px-5 text-[14px]")}>
+          <Link href="/start" className={pillClass("ink", "px-5 text-[14px]")}>
             Become a creator
           </Link>
         </div>
@@ -107,9 +107,6 @@ function Hero() {
       </div>
 
       <div className="relative mx-auto flex max-w-[1180px] flex-wrap items-center justify-center gap-x-[clamp(24px,4.4vw,64px)] gap-y-3 px-4 pb-8 pt-12 text-[clamp(15px,1.4vw,18px)] font-semibold text-[#5F636B] sm:px-8">
-        <span className="flex w-full justify-center">
-          <span className="inline-flex items-center rounded-full bg-violet px-3 py-1 text-[12px] font-semibold tracking-[0.01em] text-white">Winner · Monad Blitz Pune V3</span>
-        </span>
         <span className="text-[13px] font-medium text-[#5F636B]">Built on</span>
         {BUILT_ON.map((b) => (
           <span key={b}>{b}</span>
@@ -132,7 +129,6 @@ function Toggle() {
 
 function Stats() {
   const { ref, seen } = useInView<HTMLDivElement>();
-  const ms = useCountUp(MEASUREMENTS.registerMs.value, seen);
   const pct = useCountUp(MEASUREMENTS.rendersWithReceipt.value, seen);
   return (
     <section className="on-dark bg-ink text-white">
@@ -169,15 +165,10 @@ function Stats() {
             </p>
           </article>
           <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
-            <article className={`rv${seen ? " in" : ""} flex flex-1 flex-col gap-1.5 rounded-[30px] bg-lime bg-[url(/landing/card-lime.png)] bg-cover bg-center p-7 text-ink`} style={{ transitionDelay: ".25s" }} title={MEASUREMENTS.registerMs.source}>
-              <span className="tnum font-display text-[clamp(40px,5vw,52px)] font-black leading-none">{ms} MS</span>
-              <span className="font-display text-[17px] font-bold leading-snug">TO REGISTER A CREATOR ON MONAD</span>
-              <span className="text-[13px] text-[#3E4148]">Measured on Monad testnet, send to receipt.</span>
-            </article>
-            <article className={`rv${seen ? " in" : ""} flex flex-1 flex-col gap-1.5 rounded-[30px] bg-ink-line p-7 text-white`} style={{ transitionDelay: ".4s" }} title={MEASUREMENTS.rendersWithReceipt.source}>
+                        <article className={`rv${seen ? " in" : ""} flex flex-1 flex-col gap-1.5 rounded-[30px] bg-ink-line p-7 text-white`} style={{ transitionDelay: ".4s" }} title={MEASUREMENTS.rendersWithReceipt.source}>
               <span className="tnum font-display text-[clamp(40px,5vw,52px)] font-black leading-none text-lime">{pct}%</span>
-              <span className="font-display text-[17px] font-bold leading-snug">OF RENDERS CARRY A RECEIPT</span>
-              <span className="text-[13px] text-grey-dark">By design: payment and receipt are one transaction.</span>
+              <span className="font-display text-[17px] font-bold leading-snug">OF RENDERS CARRY A SIGNED RECEIPT</span>
+              <span className="text-[13px] text-grey-dark">By design: every render is charged and its receipt signed by Cloud KMS in one step.</span>
             </article>
           </div>
         </div>
@@ -189,10 +180,10 @@ function Stats() {
 // ---------------------------------------------------------------- how it works
 
 const STEPS = [
-  { title: "PROVE IT'S YOU", body: "An ID check for 18+, a liveness selfie, and three guided photos matched to it. The verification session is deleted once you're attested." },
-  { title: "SET YOUR TERMS", body: "Pick uses, regions, a price per render and a cap. Political, adult, minor-involving, impersonating and deceptive uses are banned in the contract." },
-  { title: "APPROVE BRANDS", body: "A brand requests a licence and you approve it. Your photos are released to that licence only, unlocked with your passkey (Face ID or Touch ID)." },
-  { title: "GET PAID, OR REVOKE", body: "Each render pays you and records a receipt in one Monad transaction. Revoke and the next render is refused." },
+  { title: "PROVE IT'S YOU", body: "Connect your YouTube channel to show it's yours, then a quick live face check (blink, turn) matched to your channel avatar." },
+  { title: "SET YOUR TERMS", body: "Pick uses, a price per image and per video, and a cap. Political, adult, minor-involving, impersonating and deceptive uses are always refused." },
+  { title: "APPROVE BRANDS", body: "A brand requests a licence and you approve it. Your photos stay encrypted with your own key in Google Cloud KMS; only the render service can open them, and every access is logged." },
+  { title: "GET PAID, OR REVOKE", body: "Each image or video ad pays you per render, with a signed receipt and a content credential. Revoke and the next render is refused." },
 ];
 
 function HowItWorks() {
@@ -283,7 +274,7 @@ function HowItWorks() {
                 </span>
               </div>
             </div>
-            <Link href="/onboard" className={pillClass("ink", "min-h-[54px]")}>
+            <Link href="/start" className={pillClass("ink", "min-h-[54px]")}>
               Get started
             </Link>
           </div>
@@ -354,7 +345,7 @@ function Creators() {
           return (
             <Link
               key={ex.photo}
-              href="/onboard"
+              href="/start"
               className={`card-in${seen ? " in" : ""} relative block self-start rounded-[28px] p-3 text-ink no-underline shadow-[0_18px_40px_rgba(18,19,22,0.12)] ${PLACE[i]}`}
               style={{ transform, transitionDelay: `${0.1 + i * 0.18}s`, backgroundImage: `url(${ex.frame})`, backgroundSize: "cover" }}
             >
@@ -438,10 +429,10 @@ function Quotes() {
                   </span>
                 ))}
               </span>
-              <Link href="/brand/onboard" className={pillClass("outline-dark", "px-6 text-[14px]")}>
+              <Link href="/start" className={pillClass("outline-dark", "px-6 text-[14px]")}>
                 License a face
               </Link>
-              <Link href="/onboard" className={pillClass("ink", "px-6 text-[14px]")}>
+              <Link href="/start" className={pillClass("ink", "px-6 text-[14px]")}>
                 Get started
               </Link>
             </span>

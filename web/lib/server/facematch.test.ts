@@ -5,8 +5,7 @@
 import { existsSync } from "node:fs";
 import sharp from "sharp";
 import { describe, expect, it } from "vitest";
-import { syntheticPortraits } from "@/lib/dev/seed";
-import { compareFaces, similarity } from "./facematch";
+import { compareFaces, similarity, facesIn } from "./facematch";
 
 describe("similarity transform", () => {
   it("recovers a known scale, rotation and translation exactly", () => {
@@ -32,7 +31,11 @@ describe("similarity transform", () => {
 describe.skipIf(!existsSync(".models/auraface_glintr100.onnx"))("local matcher with models", () => {
   it("refuses images without a face", async () => {
     const blank = new Uint8Array(await sharp({ create: { width: 400, height: 400, channels: 3, background: "#808080" } }).jpeg().toBuffer());
-    const [drawing] = await syntheticPortraits();
-    await expect(compareFaces(blank, drawing)).rejects.toThrow(/no face/);
+    await expect(compareFaces(blank, blank)).rejects.toThrow(/no face/);
+  });
+
+  it("counts no faces in a blank avatar, so the channel is refused", async () => {
+    const blank = new Uint8Array(await sharp({ create: { width: 800, height: 800, channels: 3, background: "#d0c8bc" } }).jpeg().toBuffer());
+    expect((await facesIn(blank)).count).toBe(0);
   });
 });

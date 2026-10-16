@@ -16,7 +16,7 @@ import "server-only";
  */
 import path from "node:path";
 import sharp from "sharp";
-import { singleton } from "./chain";
+import { singleton } from "./util";
 import { ensureModels } from "./facemodels";
 
 type Ort = typeof import("onnxruntime-node");
@@ -232,3 +232,15 @@ export async function compareFaces(a: Uint8Array, b: Uint8Array): Promise<number
  * impostor pair seen. Small sample: recalibrate on real data before relying on it.
  */
 export const localThreshold = () => Number(process.env.LOCAL_FACE_MATCH_THRESHOLD ?? 0.55);
+
+/** The faces YuNet finds in an image (decoded upright), best first. Used to check a channel avatar is a photo of a face. */
+export async function facesIn(bytes: Uint8Array): Promise<{ count: number; best: number }> {
+  let img = await decode(bytes);
+  let faces = await detectFaces(img);
+  if (faces.length === 0) {
+    img = await padded(img);
+    faces = await detectFaces(img);
+  }
+  img.data.fill(0);
+  return { count: faces.length, best: faces[0]?.score ?? 0 };
+}

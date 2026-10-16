@@ -4,15 +4,10 @@
  */
 
 export const MEASUREMENTS = {
-  /** CreatorRegistry.register on Monad testnet, send to receipt over the public RPC. */
-  registerMs: {
-    value: 853,
-    source: "CreatorRegistry.register on Monad testnet, 2026-10-06 (pnpm seed), send to receipt over the public RPC",
-  },
-  /** By construction: payRender anchors the receipt in the same transaction, and files are released only after it. */
+  /** By construction: a render is charged and its KMS-signed receipt stored in one Firestore transaction. */
   rendersWithReceipt: {
     value: 100,
-    source: "LicenseEscrow.payRender anchors the receipt in the same transaction that pays the creator",
+    source: "Every render is settled in one Firestore transaction that also stores its Cloud KMS-signed receipt",
   },
 } as const;
 
@@ -21,4 +16,4 @@ export type Testimonial = { quote: string; name: string; role: string };
 /** Real, attributed quotes only. Leave empty until there are some: the section is then not rendered. */
 export const TESTIMONIALS: Testimonial[] = [];
 
-export const BUILT_ON = ["Monad", "Dynamic", "Didit", "Mera", "Envio", "Gemini", "C2PA"];
+export const BUILT_ON = ["Vertex AI Gemini", "Veo", "Firebase", "YouTube", "Cloud KMS", "Cloud Run", "C2PA"];

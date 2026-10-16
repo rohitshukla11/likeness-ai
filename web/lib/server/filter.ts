@@ -3,13 +3,13 @@ import "server-only";
  * Prompt check before any render. Two layers:
  *  1. Local rules, always: keyword and phrase rules for the five banned uses (political, adult,
  *     minors, impersonation, deception). Cheap, deterministic, and blunt.
- *  2. A Gemini classifier with structured JSON output when GEMINI_API_KEY is set: banned-use
+ *  2. A Gemini classifier (gemini-3.5-flash-lite on Vertex AI) with structured JSON output: banned-use
  *     judgement plus whether the prompt fits the licence's one licensed category. If the call fails,
  *     the render is refused (fail closed), never waved through.
- * Without the key the result says "LLM filter not configured" and only the rules ran.
+ * Without a Google Cloud project configured, the result says "LLM filter not configured" and only the rules ran.
  */
 import { BANNED, CATEGORIES } from "@/lib/categories";
-import { generateContent, geminiModels } from "./gemini";
+import { generateContent, geminiModels, vertexConfigured } from "./gemini";
 
 export type FilterResult = {
   allowed: boolean;
@@ -108,7 +108,7 @@ export async function checkPrompt(prompt: string, categoryBit: number): Promise<
   reasons.push(...hits.map((h) => `banned use (rules) — ${h}`));
   layers.push({ name: "Local banned-use rules", ran: true });
 
-  if (process.env.GEMINI_API_KEY) {
+  if (vertexConfigured()) {
     try {
       const q = await geminiCheck(prompt, category);
       for (const b of q.banned) reasons.push(`banned use (Gemini) — ${b}: ${q.reason}`);
@@ -119,7 +119,7 @@ export async function checkPrompt(prompt: string, categoryBit: number): Promise<
       layers.push({ name: "Gemini LLM filter", ran: false, note: "call failed (fail closed)" });
     }
   } else {
-    layers.push({ name: "LLM filter", ran: false, note: `LLM filter not configured (GEMINI_API_KEY): rules only; fit with the licensed use (${category}) not checked` });
+    layers.push({ name: "LLM filter", ran: false, note: `LLM filter not configured (GOOGLE_CLOUD_PROJECT): rules only; fit with the licensed use (${category}) not checked` });
   }
   return { allowed: reasons.length === 0, reasons, layers };
 }

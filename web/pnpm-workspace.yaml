@@ -7,3 +7,5 @@ allowBuilds:
   "@contentauth/c2pa-node": true
   # Prebuilt CPU binaries ship in the package; its postinstall only fetches CUDA files on Linux.
   onnxruntime-node: false
+  # Not needed at runtime.
+  "@firebase/util": false

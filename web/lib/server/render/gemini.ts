@@ -1,12 +1,11 @@
 import "server-only";
 /**
- * Gemini image generation from the creator's reference photos (Gemini "Nano Banana" image models).
- * One generateContent call: the reference photos as inline images, then the brand's prompt, with
+ * Gemini image generation from the creator's reference frames (gemini-nano-banana-2.1 on Vertex AI).
+ * One generateContent call: the reference frames as inline images, then the brand's brief, with
  * responseModalities ["IMAGE"]. The image comes back inline (base64), so nothing is fetched from a URL.
- * https://ai.google.dev/gemini-api/docs/image-generation
  *
- * Google adds an invisible SynthID watermark to every image these models generate, a second,
- * independent provenance signal next to our C2PA manifest and on-chain receipt.
+ * Google adds an invisible SynthID watermark to images these models generate, a second, independent
+ * provenance signal next to our C2PA manifest and KMS-signed receipt.
  */
 import { generateContent, geminiModels } from "../gemini";
 import type { RenderInput, RenderOutput } from "./types";
@@ -35,7 +34,7 @@ export async function geminiRender(input: RenderInput): Promise<RenderOutput> {
         ],
       },
     ],
-    generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: process.env.GEMINI_ASPECT_RATIO || "1:1", imageSize: process.env.GEMINI_IMAGE_SIZE || "1K" } },
+    generationConfig: { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: input.aspectRatio || process.env.GEMINI_ASPECT_RATIO || "1:1", imageSize: process.env.GEMINI_IMAGE_SIZE || "1K" } },
   });
   if (res.promptFeedback?.blockReason) throw new Error(`Gemini blocked the request: ${res.promptFeedback.blockReason} ${res.promptFeedback.blockReasonMessage ?? ""}`.trim());
   const c = res.candidates?.[0];

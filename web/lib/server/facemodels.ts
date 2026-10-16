@@ -10,7 +10,7 @@ import { mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { singleton } from "./chain";
+import { singleton } from "./util";
 
 /** The weights, pinned by sha256: the same files and hashes as scripts/face-models.sh. */
 const MODELS = [

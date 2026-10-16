@@ -7,15 +7,15 @@ import { Providers } from "./providers";
 const display = Unbounded({ subsets: ["latin"], weight: ["700", "800", "900"], variable: "--font-display-face", display: "swap" });
 const body = Poppins({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-body-face", display: "swap" });
 
-const TAGLINE = "License your face to AI. Your terms, paid per image.";
-const DESCRIPTION = `${TAGLINE} Verified creators set the terms, brands pay per render from USDC escrow, and either side can revoke. Testnet demo on Monad.`;
+const TAGLINE = "Your face. Your terms. Verified by your channel.";
+const DESCRIPTION = `${TAGLINE} Creators license their likeness for AI image and video ads, priced by their audience; brands generate consented ads in minutes and pay per render; anyone can verify a file.`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://likeness.site"),
-  title: { default: `Likeness: ${TAGLINE}`, template: "%s · Likeness" },
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  title: { default: `Likeness AI: ${TAGLINE}`, template: "%s · Likeness AI" },
   description: DESCRIPTION,
-  openGraph: { type: "website", siteName: "Likeness", title: `Likeness: ${TAGLINE}`, description: DESCRIPTION },
-  twitter: { card: "summary", title: `Likeness: ${TAGLINE}`, description: DESCRIPTION },
+  openGraph: { type: "website", siteName: "Likeness AI", title: `Likeness AI: ${TAGLINE}`, description: DESCRIPTION },
+  twitter: { card: "summary", title: `Likeness AI: ${TAGLINE}`, description: DESCRIPTION },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

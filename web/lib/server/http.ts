@@ -1,5 +1,4 @@
 import "server-only";
-import { isAddress, type Address } from "viem";
 
 export const json = (v: unknown, status = 200) =>
   new Response(JSON.stringify(v, (_, x) => (typeof x === "bigint" ? x.toString() : x)), {
@@ -24,12 +23,8 @@ export class HttpError extends Error {
   }
 }
 
-export function address(v: string | null | undefined, name = "address"): Address {
-  if (!v || !isAddress(v)) throw new HttpError(400, `bad ${name}`);
-  return v.toLowerCase() as Address;
-}
-
-export function licenceId(v: string): bigint {
-  if (!/^[1-9]\d{0,30}$/.test(v)) throw new HttpError(400, "bad licence id");
-  return BigInt(v);
+/** A Firestore document id we generated (or a Firebase uid): letters, digits, - and _. */
+export function docId(v: string | null | undefined, name = "id"): string {
+  if (!v || !/^[A-Za-z0-9_-]{6,128}$/.test(v)) throw new HttpError(400, `bad ${name}`);
+  return v;
 }

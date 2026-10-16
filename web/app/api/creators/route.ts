@@ -1,11 +1,4 @@
-import { historySource } from "@/lib/server/index";
-import { fail, json } from "@/lib/server/http";
-import { listCreators } from "@/lib/server/protocol";
+import { listedCreators, publicCreator } from "@/lib/server/creators";
+import { route } from "@/lib/server/route";
 
-export async function GET() {
-  try {
-    return json({ source: historySource(), creators: await listCreators() });
-  } catch (e) {
-    return fail(e);
-  }
-}
+export const GET = route(async () => ({ creators: (await listedCreators()).map(publicCreator) }));

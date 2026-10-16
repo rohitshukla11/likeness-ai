@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-export const SOURCE_URL = "https://github.com/rohitshukla11/Likeness";
+export const SOURCE_URL = "https://github.com/rohitshukla11/likeness-ai";
 
 /** Footer from the landing mockup, shared by every page. */
 export function SiteFooter() {
@@ -15,7 +15,7 @@ export function SiteFooter() {
           </h2>
           <div className="flex flex-col gap-3 text-[15px] text-grey-dark">
             <span className="text-white">License your face to AI. Your terms, paid per image.</span>
-            <span>Testnet demo on Monad · adults only</span>
+            <span>Prototype on Google Cloud · demo credits · adults only (self-declared)</span>
             <Link href="/status" className="text-grey-dark underline-offset-2 hover:text-white hover:underline">
               What this server runs
             </Link>
@@ -26,11 +26,11 @@ export function SiteFooter() {
             <Link href="/#how" className="text-grey-dark hover:text-white">
               How it works
             </Link>
-            <Link href="/market" className="text-grey-dark hover:text-white">
+            <Link href="/creators" className="text-grey-dark hover:text-white">
               Creators
             </Link>
-            <Link href="/status#contracts" className="text-grey-dark hover:text-white">
-              Contracts
+            <Link href="/status" className="text-grey-dark hover:text-white">
+              Status
             </Link>
             <a href={SOURCE_URL} className="text-grey-dark hover:text-white" target="_blank" rel="noreferrer">
               Source<span className="sr-only"> (opens GitHub)</span>
