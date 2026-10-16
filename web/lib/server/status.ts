@@ -1,6 +1,5 @@
 import "server-only";
 /** Which Google services this server can actually reach, checked live (cached for a minute). */
-import { existsSync } from "node:fs";
 import { KeyManagementServiceClient } from "@google-cloud/kms";
 import { Storage } from "@google-cloud/storage";
 import { geminiModels } from "./gemini";
@@ -37,15 +36,18 @@ export async function statusChecks(): Promise<Check[]> {
       await firestore().collection("users").limit(1).get();
       return `database "${gcp.firestoreDb()}" reachable`;
     }),
+    // Only operations the least-privilege service account is granted: no key or bucket metadata reads.
     check("kms", "Cloud KMS (photo key + receipt signing key)", async () => {
       const k = new KeyManagementServiceClient();
-      const [photo] = await k.getCryptoKey({ name: gcp.photoKey() });
+      const [enc] = await k.encrypt({ name: gcp.photoKey(), plaintext: Buffer.from([1]), additionalAuthenticatedData: Buffer.from("status") });
+      const [dec] = await k.decrypt({ name: gcp.photoKey(), ciphertext: enc.ciphertext, additionalAuthenticatedData: Buffer.from("status") });
+      if (Buffer.from(dec.plaintext as Uint8Array)[0] !== 1) throw new Error("photo key round trip failed");
       const [pub] = await k.getPublicKey({ name: gcp.receiptKeyVersion() });
-      return `photos: ${photo.purpose}; receipts: ${pub.algorithm}`;
+      return `photos: encrypt/decrypt ok; receipts: ${pub.algorithm}`;
     }),
     check("storage", "Cloud Storage (private bucket)", async () => {
-      const [meta] = await new Storage().bucket(gcp.bucket()).getMetadata();
-      return `${gcp.bucket()} (${meta.location}, public access ${meta.iamConfiguration?.publicAccessPrevention ?? "unknown"})`;
+      await new Storage().bucket(gcp.bucket()).file("status/probe").exists();
+      return `${gcp.bucket()} reachable`;
     }),
     check("vertex-gemini", "Vertex AI Gemini (image + safety filter)", async () => {
       if (!project) throw new Error("no project");
@@ -66,7 +68,6 @@ export async function statusChecks(): Promise<Check[]> {
       return "signing certificate configured (TEST certificate, not on the C2PA trust list)";
     }),
   ]);
-  void existsSync;
   cache = { at: Date.now(), checks };
   return checks;
 }
