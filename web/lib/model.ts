@@ -143,6 +143,14 @@ export function creatorFee(price: number): { creator: number; fee: number } {
 }
 
 /** Why a video can't be made under this licence right now, or null. Pure, so the UI and server agree. */
+/**
+ * Licences approved before video ads existed have no video fields. They get the same defaults
+ * decide() gives terms without them: video allowed, up to 3 videos (never more than the render cap).
+ */
+export function withVideoDefaults<T extends Omit<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount"> & Partial<Pick<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount">>>(l: T): T & Pick<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount"> {
+  return { ...l, videoAllowed: l.videoAllowed ?? true, maxVideos: l.maxVideos ?? Math.min(3, l.maxRenders), videoCount: l.videoCount ?? 0 };
+}
+
 export function videoRefusal(l: Pick<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount">, videosToday: number, perDay: number): string | null {
   if (!l.videoAllowed) return "this creator doesn't allow video ads under this licence";
   if ((l.videoCount ?? 0) >= l.maxVideos) return `this licence's video limit (${l.maxVideos}) is used up`;

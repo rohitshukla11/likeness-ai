@@ -24,6 +24,8 @@ export type Render = {
   fromRenderId?: string;
   aspect?: "1:1" | "16:9" | "9:16";
   hasPreview?: boolean;
+  /** An unlabelled still is kept, so a video ad can animate it (image ads from before Phase 2 have none). */
+  hasRaw?: boolean;
   creatorName: string;
   brandName: string;
   use: string;

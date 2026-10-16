@@ -12,7 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { CATEGORIES } from "@/lib/categories";
 import sharp from "sharp";
-import { creatorFee, licenceStatus, videoRefusal, type LicenceDoc, type ReceiptPayload } from "@/lib/model";
+import { creatorFee, licenceStatus, videoRefusal, withVideoDefaults, type LicenceDoc, type ReceiptPayload } from "@/lib/model";
 import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt, type FilterResult } from "./filter";
@@ -65,6 +65,13 @@ export class RenderRefused extends HttpError {
   ) {
     super(status, message);
   }
+}
+
+/** A render as the browser sees it: the private storage paths stay on the server. */
+export function publicRender(r: RenderDoc) {
+  const { object: _o, rawObject: _r, previewObject: _p, ...pub } = r;
+  void _o, void _r, void _p;
+  return { ...pub, hasPreview: !!r.previewObject, hasRaw: !!r.rawObject };
 }
 
 /** Checks shared by image and video renders. Returns the licence and price. */
@@ -154,7 +161,7 @@ export async function settle(input: {
     const cref = db().collection("credits").doc(l0.creatorId);
     const uref = db().collection("usage").doc(day());
     const [ls, bs, cs] = await Promise.all([tx.get(lref), tx.get(bref), tx.get(cref)]);
-    const l = ls.data() as LicenceDoc;
+    const l = withVideoDefaults(ls.data() as LicenceDoc);
     const status = licenceStatus(l);
     if (status !== "Active") throw new RenderRefused(409, `render refused: the licence became ${status.toLowerCase()} during the render`);
     if (l.renderCount !== l0.renderCount) throw new RenderRefused(409, "another render on this licence finished first; try again");
@@ -215,5 +222,5 @@ export async function renderImage(brandUid: string, licenceId: string, brief: st
   const previewObject = `renders/preview/${renderId}.jpg`;
   await putObject(previewObject, await sharp(labelled).resize({ width: 480, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer(), "image/jpeg");
   const { render, receipt } = await settle({ brandUid, licence, type: "image", bytes: signed, mime: "image/jpeg", model: out.model, brief, renderId, rawObject, previewObject, aspect: aspectRatio });
-  return { render, receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, filter };
+  return { render: publicRender(render), receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, filter };
 }

@@ -123,7 +123,7 @@ export const RenderCard = forwardRef<HTMLDivElement, { r: Render; mode: "brand" 
               Verify
             </Link>
           )}
-          {mode === "brand" && r.type === "image" && onMakeVideo && (
+          {mode === "brand" && r.type === "image" && r.hasRaw && onMakeVideo && (
             <button type="button" onClick={() => onMakeVideo(r)} className={pillClass("lime", "min-h-9 px-3 text-[13px]")}>
               Make a video from this
             </button>

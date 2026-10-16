@@ -1,7 +1,7 @@
 import "server-only";
 /** Licence requests, the creator's decision, licences and revocation. */
 import { randomBytes } from "node:crypto";
-import { licenceStatus, type LicenceDoc, type RequestDoc } from "@/lib/model";
+import { licenceStatus, withVideoDefaults, type LicenceDoc, type RequestDoc } from "@/lib/model";
 import { getBrand } from "./accounts";
 import { getCreator } from "./creators";
 import { firestore } from "./firebase-admin";
@@ -86,10 +86,10 @@ export async function revoke(creatorUid: string, licenceId: string): Promise<Lic
 
 export async function getLicence(id: string): Promise<LicenceDoc | null> {
   const s = await db().collection("licences").doc(id).get();
-  return s.exists ? (s.data() as LicenceDoc) : null;
+  return s.exists ? withVideoDefaults(s.data() as LicenceDoc) : null;
 }
 
-const withStatus = (l: LicenceDoc) => ({ ...l, status: licenceStatus(l) });
+const withStatus = (l: LicenceDoc) => ({ ...withVideoDefaults(l), status: licenceStatus(l) });
 
 export async function listFor(field: "creatorId" | "brandId", uid: string) {
   // Equality filter only, sorted here: no composite index needed on a fresh database.

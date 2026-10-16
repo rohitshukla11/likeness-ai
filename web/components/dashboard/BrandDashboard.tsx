@@ -82,7 +82,7 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
           <LicenceCard
             key={l.id}
             l={l}
-            stills={allRenders.filter((r) => r.licenceId === l.id && r.type === "image")}
+            stills={allRenders.filter((r) => r.licenceId === l.id && r.type === "image" && r.hasRaw)}
             videoFrom={videoFrom?.licenceId === l.id ? videoFrom.renderId : null}
             onRendered={async (render) => {
               setFresh((f) => [asRow(render, l), ...f]);

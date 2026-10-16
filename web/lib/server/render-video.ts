@@ -17,7 +17,7 @@ import { getCreator } from "./creators";
 import { checkPrompt } from "./filter";
 import { firestore } from "./firebase-admin";
 import { labelVideo, motionAd, posterFrame } from "./motion";
-import { day, preflight, RenderRefused, settle, videosPerDay, type RenderDoc } from "./render-image";
+import { day, preflight, publicRender, RenderRefused, settle, videosPerDay, type RenderDoc } from "./render-image";
 import { getObject, putObject } from "./storage";
 import { imageToVideo, veoEnabled, veoModel } from "./veo";
 
@@ -92,5 +92,5 @@ export async function renderVideo(brandUid: string, input: { licenceId: string; 
     aspect: input.aspectRatio,
     price: pipeline === "veo-3.1-lite" ? price : 0,
   });
-  return { render, receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, pipeline, note, veoMs };
+  return { render: publicRender(render), receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, pipeline, note, veoMs };
 }
