@@ -6,80 +6,26 @@ on:
   pull_request:
 
 jobs:
-  contracts:
-    name: forge test (unit, fuzz, invariant, Monad testnet fork)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: v1.8.3
-
-      - name: forge build
-        working-directory: contracts
-        run: forge build --sizes
-
-      # The fork suite reads Circle USDC on Monad testnet through the public RPC.
-      - name: forge test
-        working-directory: contracts
-        env:
-          MONAD_RPC_URL: https://testnet-rpc.monad.xyz
-        run: forge test
-
   web:
-    name: web (crypto, pipeline, Monad fork lifecycle + build)
+    name: web (typecheck, tests, production build)
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      # anvil and contracts/out: the attester test and the licence lifecycle on a Monad testnet fork.
-      - uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: v1.8.3
-      - run: forge build
-        working-directory: contracts
-
       - uses: pnpm/action-setup@v4
         with:
           version: 12.5.1
-
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
-
       - run: pnpm install --frozen-lockfile
-      # Throwaway TEST C2PA chain for the render-pipeline tests (never a real signing identity).
+      # Throwaway TEST C2PA chain for the C2PA tests (never a real signing identity).
       - run: sh scripts/c2pa-testcert.sh
+      - run: pnpm typecheck
       - run: pnpm test
-      # No Dynamic environment ID in CI: the wallet panel renders its "not configured" state.
+      # No Google project in CI: pages render their "not configured" states.
       - run: pnpm build
-
-  indexer:
-    name: indexer (Envio codegen + handler tests)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: indexer
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 12.5.1
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-          cache-dependency-path: indexer/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm codegen
-      - run: pnpm test
