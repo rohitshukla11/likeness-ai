@@ -123,7 +123,8 @@ export function CreatorDashboard({ me, refresh }: { me: Me; refresh: () => Promi
 }
 
 function TermsCard({ terms, onSaved }: { terms: Terms | null; onSaved: () => Promise<void> }) {
-  const [t, setT] = useState<Terms | null>(terms);
+  // Terms saved before video settings existed: video allowed, 3 per licence.
+  const [t, setT] = useState<Terms | null>(terms ? { ...terms, videoAllowed: terms.videoAllowed ?? true, maxVideosPerLicence: terms.maxVideosPerLicence ?? 3 } : null);
   const [msg, setMsg] = useState<string | null>(null);
   if (!t) return null;
   const num = (k: keyof Terms, label: string) => (
@@ -149,7 +150,12 @@ function TermsCard({ terms, onSaved }: { terms: Terms | null; onSaved: () => Pro
         {num("pricePerVideo", "Price per video (credits)")}
         {num("maxRendersPerLicence", "Max renders per licence")}
         {num("maxDays", "Max licence length (days)")}
+        {num("maxVideosPerLicence", "Max videos per licence")}
       </div>
+      <label className="flex items-center gap-2 text-[15px]">
+        <input type="checkbox" checked={t.videoAllowed} onChange={(e) => setT({ ...t, videoAllowed: e.target.checked })} className="h-5 w-5" />
+        Allow video ads (Veo animates an image ad you already licensed)
+      </label>
       <p className="m-0 text-[13px] text-grey">You approve every licence yourself. Political, adult, minor-related, impersonation and deceptive uses are never allowed.</p>
       <button
         type="button"

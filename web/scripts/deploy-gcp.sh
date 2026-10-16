@@ -58,7 +58,7 @@ $GCLOUD builds submit . --config=/tmp/likeness-cloudbuild.yaml --project="$PROJE
 $GCLOUD run deploy "$SERVICE" --image="${REPO}/web:${TAG}" --region="$REGION" --project="$PROJECT" \
   --service-account="$SA" --allow-unauthenticated \
   --cpu=2 --memory=2Gi --timeout=300 --concurrency=10 --min-instances=0 --max-instances=3 \
-  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GCP_REGION=${REGION},FIRESTORE_DATABASE=likeness,GCS_BUCKET=${PROJECT}-likeness-private,KMS_KEYRING=likeness,NEXT_PUBLIC_APP_URL=${URL},FACE_MATCH_THRESHOLD=${FACE_MATCH_THRESHOLD:-0.5},RENDERS_PER_DAY=${RENDERS_PER_DAY:-40}" \
+  --set-env-vars="GOOGLE_CLOUD_PROJECT=${PROJECT},GCP_REGION=${REGION},FIRESTORE_DATABASE=likeness,GCS_BUCKET=${PROJECT}-likeness-private,KMS_KEYRING=likeness,NEXT_PUBLIC_APP_URL=${URL},FACE_MATCH_THRESHOLD=${FACE_MATCH_THRESHOLD:-0.5},RENDERS_PER_DAY=${RENDERS_PER_DAY:-40},VIDEOS_PER_DAY=${VIDEOS_PER_DAY:-10}" \
   --set-secrets="C2PA_CERT_PEM=c2pa-cert:latest,C2PA_KEY_PEM=c2pa-key:latest" \
   --quiet
 

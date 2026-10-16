@@ -117,9 +117,18 @@ export async function goLive(uid: string, frames: Uint8Array[], answers: { adult
 export async function setTerms(uid: string, t: Terms): Promise<Terms> {
   const keys = CATEGORIES.map((x) => x.key) as string[];
   if (!t.uses?.length || t.uses.some((u) => !keys.includes(u))) throw new HttpError(400, "choose at least one allowed use");
-  for (const [k, max] of [["pricePerImage", 100_000], ["pricePerVideo", 400_000], ["maxRendersPerLicence", 100], ["maxDays", 365]] as const)
+  for (const [k, max] of [["pricePerImage", 100_000], ["pricePerVideo", 400_000], ["maxRendersPerLicence", 100], ["maxDays", 365], ["maxVideosPerLicence", 20]] as const)
     if (!Number.isInteger(t[k]) || t[k] < 1 || t[k] > max) throw new HttpError(400, `${k} must be a whole number from 1 to ${max}`);
-  const terms: Terms = { uses: t.uses, pricePerImage: t.pricePerImage, pricePerVideo: t.pricePerVideo, maxRendersPerLicence: t.maxRendersPerLicence, maxDays: t.maxDays, approval: "manual" };
+  const terms: Terms = {
+    uses: t.uses,
+    pricePerImage: t.pricePerImage,
+    pricePerVideo: t.pricePerVideo,
+    maxRendersPerLicence: t.maxRendersPerLicence,
+    maxDays: t.maxDays,
+    approval: "manual",
+    videoAllowed: !!t.videoAllowed,
+    maxVideosPerLicence: t.maxVideosPerLicence,
+  };
   await creators().doc(uid).update({ terms, updatedAt: Date.now() });
   return terms;
 }

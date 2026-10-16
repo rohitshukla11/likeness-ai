@@ -25,8 +25,9 @@ ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY \
 RUN pnpm build
 
 FROM node:22.23.3-bookworm-slim AS run
-# ffmpeg: the free motion-ad fallback for video ads.
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg && rm -rf /var/lib/apt/lists/*
+# ffmpeg: the free motion-ad fallback and the label on video ads. DejaVu fonts: captions and end-cards
+# are drawn as SVG text, and the slim image has no fonts.
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates ffmpeg fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1 PORT=8080 HOSTNAME=0.0.0.0 FACE_MODELS_DIR=/app/.models
 COPY --from=build /app/.next/standalone ./

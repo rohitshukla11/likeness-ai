@@ -65,7 +65,12 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
           </span>
         ))}
         {licences.map((l) => (
-          <LicenceCard key={l.id} l={l} onRendered={async () => Promise.all([lists.reload(), renders.reload(), refresh()]).then(() => {})} />
+          <LicenceCard
+            key={l.id}
+            l={l}
+            stills={(renders.data?.asBrand ?? []).filter((r) => r.licenceId === l.id && r.type === "image")}
+            onRendered={async () => Promise.all([lists.reload(), renders.reload(), refresh()]).then(() => {})}
+          />
         ))}
       </Card>
 
@@ -75,8 +80,7 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
           <div key={r.id} className="flex flex-wrap items-center gap-3 border-b border-divider py-2 last:border-0">
             <span className="font-semibold">{r.type === "video" ? "Video" : "Image"}</span>
             <span className="text-grey">
-              {when(r.createdAt)} · {r.price} credits · {r.model}
-              {r.pipeline ? ` · ${r.pipeline}` : ""}
+              {when(r.createdAt)} · {r.price} credits · {r.pipeline === "ffmpeg-fallback" ? "free fallback motion ad (ffmpeg)" : r.pipeline === "veo-3.1-lite" ? "Veo 3.1 Lite" : r.model}
             </span>
             <button type="button" onClick={() => openRender(r.id).catch((e) => setMsg(reason(e)))} className={pillClass("outline", "ml-auto min-h-10 px-4")}>
               Download
@@ -88,7 +92,7 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
   );
 }
 
-function LicenceCard({ l, onRendered }: { l: LicenceRow; onRendered: () => Promise<void> }) {
+function LicenceCard({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]; onRendered: () => Promise<void> }) {
   const [brief, setBrief] = useState("Smiling in a sunlit café holding a ceramic coffee cup, product shot for a spring campaign");
   const [aspect, setAspect] = useState<"1:1" | "16:9" | "9:16">("1:1");
   const [busy, setBusy] = useState<string | null>(null);
@@ -115,7 +119,7 @@ function LicenceCard({ l, onRendered }: { l: LicenceRow; onRendered: () => Promi
         <StatusBadge status={l.status} />
         <b>{l.creatorName}</b>
         <span className="text-grey">
-          {useLabel(l.use)} · {l.renderCount}/{l.maxRenders} renders · image {l.pricePerImage} · video {l.pricePerVideo} credits · until {when(l.end)}
+          {useLabel(l.use)} · {l.renderCount}/{l.maxRenders} renders · {l.videoAllowed ? `${l.videoCount ?? 0}/${l.maxVideos} videos` : "no video"} · image {l.pricePerImage} · video {l.pricePerVideo} credits · until {when(l.end)}
         </span>
       </span>
       {l.status === "Active" && (
@@ -136,7 +140,75 @@ function LicenceCard({ l, onRendered }: { l: LicenceRow; onRendered: () => Promi
           </span>
         </>
       )}
+      {l.status === "Active" && l.videoAllowed && <VideoMaker l={l} stills={stills} onRendered={onRendered} />}
       {busy && <span className="text-[14px] text-wait">{busy}</span>}
+      {out && <span className="text-[14px] text-ok">{out}</span>}
+      {err && <span role="alert" className="text-[14px] text-bad">{err}</span>}
+    </div>
+  );
+}
+
+function VideoMaker({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]; onRendered: () => Promise<void> }) {
+  const [from, setFrom] = useState("");
+  const [prompt, setPrompt] = useState("She lifts the cup toward the camera and smiles, gentle push-in, warm café light");
+  const [seconds, setSeconds] = useState<6 | 8>(6);
+  const [aspect, setAspect] = useState<"16:9" | "9:16">("16:9");
+  const [busy, setBusy] = useState(false);
+  const [out, setOut] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const left = l.maxVideos - (l.videoCount ?? 0);
+  if (stills.length === 0) return <span className="text-[14px] text-grey">Make an image ad first: a video ad animates one of your licensed images.</span>;
+  const go = async () => {
+    setBusy(true);
+    setErr(null);
+    setOut(null);
+    try {
+      const r = await api<{ render: { id: string; price: number }; pipeline: string; note: string }>("/api/render/video", {
+        method: "POST",
+        body: JSON.stringify({ licenceId: l.id, fromRenderId: from || stills[0].id, prompt, seconds, aspectRatio: aspect }),
+      });
+      setOut(r.pipeline === "veo-3.1-lite" ? `Video ad ready (Veo 3.1 Lite): ${r.render.price} credits paid.` : `Veo didn't make this one, so you got the free fallback motion ad (no charge). ${r.note}`);
+      await onRendered();
+      await openRender(r.render.id);
+    } catch (e) {
+      setErr(reason(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="mt-1 flex flex-col gap-2 border-t border-divider pt-2">
+      <b className="text-[14px]">Video ad (Veo 3.1 Lite) · {left > 0 ? `${left} left on this licence` : "limit reached"}</b>
+      <label className="flex flex-col gap-1 text-[14px]">
+        <span className="text-grey">Animate this licensed image</span>
+        <select value={from || stills[0].id} onChange={(e) => setFrom(e.target.value)} className={inputClass}>
+          {stills.map((r) => (
+            <option key={r.id} value={r.id}>
+              Image ad from {when(r.createdAt)}: {r.brief.slice(0, 50)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1 text-[14px]">
+        <span className="text-grey">Motion (what happens in the video)</span>
+        <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={`${inputClass} py-2`} />
+      </label>
+      <span className="flex flex-wrap items-center gap-2">
+        {([6, 8] as const).map((n) => (
+          <button key={n} type="button" aria-pressed={seconds === n} onClick={() => setSeconds(n)} className={pillClass(seconds === n ? "ink" : "outline", "min-h-9 px-3 text-[13px]")}>
+            {n} s
+          </button>
+        ))}
+        {(["16:9", "9:16"] as const).map((a) => (
+          <button key={a} type="button" aria-pressed={aspect === a} onClick={() => setAspect(a)} className={pillClass(aspect === a ? "ink" : "outline", "min-h-9 px-3 text-[13px]")}>
+            {a}
+          </button>
+        ))}
+        <button type="button" disabled={busy || left <= 0} onClick={go} className={pillClass("lime", "min-h-10 px-4")}>
+          Make a video ad ({l.pricePerVideo} credits)
+        </button>
+      </span>
+      {busy && <span className="text-[14px] text-wait">Generating with Veo 3.1 Lite (about a minute), then labelling, signing and paying…</span>}
       {out && <span className="text-[14px] text-ok">{out}</span>}
       {err && <span role="alert" className="text-[14px] text-bad">{err}</span>}
     </div>

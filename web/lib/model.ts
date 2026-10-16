@@ -29,6 +29,9 @@ export type Terms = {
   maxRendersPerLicence: number;
   maxDays: number;
   approval: "manual";
+  /** Whether brands may make video ads (Veo) from licensed stills, and how many per licence. */
+  videoAllowed: boolean;
+  maxVideosPerLicence: number;
 };
 
 export type CreatorDoc = {
@@ -82,6 +85,9 @@ export type LicenceDoc = {
   renderCount: number;
   pricePerImage: number;
   pricePerVideo: number;
+  videoAllowed: boolean;
+  maxVideos: number;
+  videoCount: number;
   revokedAt?: number;
   createdAt: number;
 };
@@ -101,6 +107,9 @@ export type ReceiptPayload = {
   model: string;
   price: number;
   createdAt: number;
+  /** Video only: which pipeline made it, and the licensed still it started from. */
+  pipeline?: "veo-3.1-lite" | "ffmpeg-fallback";
+  fromRenderId?: string;
 };
 
 export const FEE_PERCENT = 10;
@@ -116,7 +125,7 @@ export function audiencePrice(subscribers: number | null): { image: number; vide
 
 export function defaultTerms(subscribers: number | null): Terms {
   const p = audiencePrice(subscribers);
-  return { uses: ["advertising", "social"], pricePerImage: p.image, pricePerVideo: p.video, maxRendersPerLicence: 10, maxDays: 30, approval: "manual" };
+  return { uses: ["advertising", "social"], pricePerImage: p.image, pricePerVideo: p.video, maxRendersPerLicence: 10, maxDays: 30, approval: "manual", videoAllowed: true, maxVideosPerLicence: 3 };
 }
 
 export function licenceStatus(l: Pick<LicenceDoc, "revokedAt" | "end" | "renderCount" | "maxRenders">, now = Date.now()): LicenceStatus {
@@ -131,6 +140,14 @@ export const useLabel = (key: string) => CATEGORIES.find((c) => c.key === key)?.
 export function creatorFee(price: number): { creator: number; fee: number } {
   const fee = Math.floor((price * FEE_PERCENT) / 100);
   return { creator: price - fee, fee };
+}
+
+/** Why a video can't be made under this licence right now, or null. Pure, so the UI and server agree. */
+export function videoRefusal(l: Pick<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount">, videosToday: number, perDay: number): string | null {
+  if (!l.videoAllowed) return "this creator doesn't allow video ads under this licence";
+  if ((l.videoCount ?? 0) >= l.maxVideos) return `this licence's video limit (${l.maxVideos}) is used up`;
+  if (videosToday >= perDay) return `the site's daily video limit (${perDay}) is reached; try again after 00:00 UTC`;
+  return null;
 }
 
 export const credits = (n: number) => `${n.toLocaleString("en-US")} credits`;

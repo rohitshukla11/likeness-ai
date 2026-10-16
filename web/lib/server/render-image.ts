@@ -11,7 +11,8 @@ import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { CATEGORIES } from "@/lib/categories";
-import { creatorFee, licenceStatus, type LicenceDoc, type ReceiptPayload } from "@/lib/model";
+import sharp from "sharp";
+import { creatorFee, licenceStatus, videoRefusal, type LicenceDoc, type ReceiptPayload } from "@/lib/model";
 import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt, type FilterResult } from "./filter";
@@ -26,7 +27,8 @@ import { openFrames } from "./vault";
 
 const db = () => firestore();
 export const rendersPerDay = () => Number(process.env.RENDERS_PER_DAY ?? 40);
-const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
+export const videosPerDay = () => Number(process.env.VIDEOS_PER_DAY ?? 10);
+export const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 
 export type RenderDoc = {
   id: string;
@@ -44,9 +46,12 @@ export type RenderDoc = {
   fee: number;
   brief: string;
   createdAt: number;
-  /** Video only: which pipeline made it. */
+  /** Image only: the unlabelled still, kept private, which a video ad can start from. */
+  rawObject?: string;
+  /** Video only: which pipeline made it, and the licensed still it started from. */
   pipeline?: "veo-3.1-lite" | "ffmpeg-fallback";
   fromRenderId?: string;
+  pipelineNote?: string;
 };
 
 export class RenderRefused extends HttpError {
@@ -86,10 +91,14 @@ export async function settle(input: {
   renderId: string;
   pipeline?: RenderDoc["pipeline"];
   fromRenderId?: string;
+  pipelineNote?: string;
+  rawObject?: string;
+  /** Overrides the licence price (the free ffmpeg fallback is 0). */
+  price?: number;
 }): Promise<{ render: RenderDoc; receipt: Awaited<ReturnType<typeof signPayload>> }> {
   const { licence: l0 } = input;
   const sha256 = createHash("sha256").update(input.bytes).digest("hex");
-  const price = input.type === "video" ? l0.pricePerVideo : l0.pricePerImage;
+  const price = input.price ?? (input.type === "video" ? l0.pricePerVideo : l0.pricePerImage);
   const payload: ReceiptPayload = {
     v: 1,
     contentSha256: sha256,
@@ -103,6 +112,8 @@ export async function settle(input: {
     model: input.model,
     price,
     createdAt: Date.now(),
+    ...(input.pipeline ? { pipeline: input.pipeline } : {}),
+    ...(input.fromRenderId ? { fromRenderId: input.fromRenderId } : {}),
   };
   const receipt = await signPayload(payload);
   const ext = input.mime === "video/mp4" ? "mp4" : input.mime === "image/png" ? "png" : "jpg";
@@ -127,6 +138,8 @@ export async function settle(input: {
     createdAt: payload.createdAt,
     ...(input.pipeline ? { pipeline: input.pipeline } : {}),
     ...(input.fromRenderId ? { fromRenderId: input.fromRenderId } : {}),
+    ...(input.pipelineNote ? { pipelineNote: input.pipelineNote } : {}),
+    ...(input.rawObject ? { rawObject: input.rawObject } : {}),
   };
   await db().runTransaction(async (tx) => {
     const lref = db().collection("licences").doc(l0.id);
@@ -140,13 +153,20 @@ export async function settle(input: {
     if (l.renderCount !== l0.renderCount) throw new RenderRefused(409, "another render on this licence finished first; try again");
     const bal = Number(bs.data()?.balance ?? 0);
     if (bal < price) throw new RenderRefused(402, "not enough demo credits");
-    tx.update(lref, { renderCount: l.renderCount + 1 });
-    tx.set(bref, { uid: l0.brandId, balance: bal - price, updatedAt: Date.now() }, { merge: true });
-    tx.set(cref, { uid: l0.creatorId, balance: Number(cs.data()?.balance ?? 0) + creatorShare, updatedAt: Date.now() }, { merge: true });
-    tx.create(db().collection("ledger").doc(), { uid: l0.brandId, delta: -price, reason: `${input.type} render under licence ${l0.id}`, renderId: render.id, licenceId: l0.id, at: Date.now() });
-    tx.create(db().collection("ledger").doc(), { uid: l0.creatorId, delta: creatorShare, reason: `${input.type} render by ${l0.brandName} (after ${fee} credit fee)`, renderId: render.id, licenceId: l0.id, at: Date.now() });
-    tx.create(db().collection("ledger").doc(), { uid: "platform", delta: fee, reason: `10% fee on render ${render.id}`, renderId: render.id, at: Date.now() });
-    tx.set(uref, { renders: FieldValue.increment(1) }, { merge: true });
+    if (input.type === "video") {
+      const today = Number((await tx.get(uref)).data()?.videos ?? 0);
+      const why = videoRefusal(l, today, videosPerDay());
+      if (why) throw new RenderRefused(409, `render refused: ${why}`);
+    }
+    tx.update(lref, { renderCount: l.renderCount + 1, ...(input.type === "video" ? { videoCount: (l.videoCount ?? 0) + 1 } : {}) });
+    if (price > 0) {
+      tx.set(bref, { uid: l0.brandId, balance: bal - price, updatedAt: Date.now() }, { merge: true });
+      tx.set(cref, { uid: l0.creatorId, balance: Number(cs.data()?.balance ?? 0) + creatorShare, updatedAt: Date.now() }, { merge: true });
+      tx.create(db().collection("ledger").doc(), { uid: l0.brandId, delta: -price, reason: `${input.type} render under licence ${l0.id}`, renderId: render.id, licenceId: l0.id, at: Date.now() });
+      tx.create(db().collection("ledger").doc(), { uid: l0.creatorId, delta: creatorShare, reason: `${input.type} render by ${l0.brandName} (after ${fee} credit fee)`, renderId: render.id, licenceId: l0.id, at: Date.now() });
+      tx.create(db().collection("ledger").doc(), { uid: "platform", delta: fee, reason: `10% fee on render ${render.id}`, renderId: render.id, at: Date.now() });
+    }
+    tx.set(uref, { renders: FieldValue.increment(1), ...(input.type === "video" ? { videos: FieldValue.increment(1) } : {}) }, { merge: true });
     tx.create(db().collection("renders").doc(render.id), render);
     tx.create(db().collection("receipts").doc(sha256), { ...receipt, renderId: render.id });
   });
@@ -168,6 +188,9 @@ export async function renderImage(brandUid: string, licenceId: string, brief: st
   } finally {
     refs.forEach((r) => r.fill(0));
   }
+  // Keep the unlabelled still privately: a video ad under this licence can start from it.
+  const rawObject = `renders/raw/${renderId}.jpg`;
+  await putObject(rawObject, await sharp(out.bytes).jpeg({ quality: 94 }).toBuffer(), "image/jpeg");
   const labelled = await labelRender(out.bytes);
   const signed = embedManifest(new Uint8Array(labelled), "image/jpeg", {
     protocol: "likeness-ai/1",
@@ -182,6 +205,6 @@ export async function renderImage(brandUid: string, licenceId: string, brief: st
     promptSha256: createHash("sha256").update(brief).digest("hex"),
     createdAt: new Date().toISOString(),
   });
-  const { render, receipt } = await settle({ brandUid, licence, type: "image", bytes: signed, mime: "image/jpeg", model: out.model, brief, renderId });
+  const { render, receipt } = await settle({ brandUid, licence, type: "image", bytes: signed, mime: "image/jpeg", model: out.model, brief, renderId, rawObject });
   return { render, receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, filter };
 }

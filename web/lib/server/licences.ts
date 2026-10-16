@@ -37,7 +37,7 @@ export async function decide(creatorUid: string, requestId: string, approve: boo
     if (r.creatorId !== creatorUid) throw new HttpError(403, "only the creator can decide this request");
     if (r.state !== "pending") throw new HttpError(409, `request already ${r.state}`);
     const cs = await tx.get(db().collection("creators").doc(creatorUid));
-    const c = cs.data() as { displayName: string; terms?: { pricePerImage: number; pricePerVideo: number } } | undefined;
+    const c = cs.data() as { displayName: string; terms?: { pricePerImage: number; pricePerVideo: number; videoAllowed?: boolean; maxVideosPerLicence?: number } } | undefined;
     if (!approve) {
       tx.update(ref, { state: "declined", decidedAt: Date.now() });
       return { request: { ...r, state: "declined" as const } };
@@ -58,6 +58,9 @@ export async function decide(creatorUid: string, requestId: string, approve: boo
       renderCount: 0,
       pricePerImage: c.terms.pricePerImage,
       pricePerVideo: c.terms.pricePerVideo,
+      videoAllowed: c.terms.videoAllowed ?? true,
+      maxVideos: Math.min(c.terms.maxVideosPerLicence ?? 3, r.maxRenders),
+      videoCount: 0,
       createdAt: now,
     };
     tx.create(db().collection("licences").doc(licence.id), licence);
