@@ -6,7 +6,8 @@ import type { Me } from "@/components/auth/AuthProvider";
 import { CATEGORIES } from "@/lib/categories";
 import { api, reason } from "@/lib/client/firebase";
 import { credits, subscriberLabel, useLabel, type Terms } from "@/lib/model";
-import { openRender, useApi, when, type Lists, type Render } from "./shared";
+import { RenderCard } from "./RenderCard";
+import { useApi, when, type Lists, type Render } from "./shared";
 
 export function CreatorDashboard({ me, refresh }: { me: Me; refresh: () => Promise<void> }) {
   const c = me.creator!;
@@ -84,18 +85,11 @@ export function CreatorDashboard({ me, refresh }: { me: Me; refresh: () => Promi
         ))}
       </Card>
 
-      <Card title="Renders of your likeness">
+      <Card title="Ads made with your likeness">
+        <p className="m-0 text-[14px] text-grey">Every image and video a brand made with your face, what it was for, and what you earned. Read-only.</p>
         {(renders.data?.asCreator ?? []).length === 0 && <p className="m-0 text-grey">None yet.</p>}
         {(renders.data?.asCreator ?? []).map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center gap-3 border-b border-divider py-2 last:border-0">
-            <span className="font-semibold">{r.type === "video" ? "Video" : "Image"}</span>
-            <span className="text-grey">
-              {when(r.createdAt)} · paid {r.price}, you got {r.creatorShare}
-            </span>
-            <button type="button" onClick={() => openRender(r.id)} className={pillClass("outline", "ml-auto min-h-10 px-4")}>
-              View
-            </button>
-          </div>
+          <RenderCard key={r.id} r={r} mode="creator" />
         ))}
       </Card>
 

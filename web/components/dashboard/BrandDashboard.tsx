@@ -1,17 +1,29 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Card, StatCard, pillClass } from "@/components/ds";
 import { StatusBadge, inputClass } from "@/components/ui";
 import type { Me } from "@/components/auth/AuthProvider";
 import { api, reason } from "@/lib/client/firebase";
 import { credits, DEMO_TOPUP, useLabel } from "@/lib/model";
-import { openRender, useApi, when, type LicenceRow, type Lists, type Render } from "./shared";
+import { RenderCard } from "./RenderCard";
+import { useApi, when, type LicenceRow, type Lists, type Render } from "./shared";
+
+/** What a render endpoint returns, turned into a list row using the licence's names. */
+const asRow = (render: Omit<Render, "creatorName" | "brandName" | "use">, l: LicenceRow): Render => ({ ...render, creatorName: l.creatorName, brandName: l.brandName, use: l.use });
 
 export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise<void> }) {
   const lists = useApi<Lists>("/api/licences");
   const renders = useApi<{ asBrand: Render[] }>("/api/renders");
   const [msg, setMsg] = useState<string | null>(null);
+  // Renders made in this session go on top at once; the list then reloads in the background.
+  const [fresh, setFresh] = useState<Render[]>([]);
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const [videoFrom, setVideoFrom] = useState<{ licenceId: string; renderId: string } | null>(null);
+  const cardRefs = useRef(new Map<string, HTMLDivElement>());
+  useEffect(() => {
+    if (highlight) cardRefs.current.get(highlight)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlight, fresh]);
   const [name, setName] = useState(me.brand?.name ?? "");
   const [site, setSite] = useState(me.brand?.website ?? "");
 
@@ -34,6 +46,8 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
     );
 
   const licences = lists.data?.asBrand.licences ?? [];
+  const listed = renders.data?.asBrand ?? [];
+  const allRenders = [...fresh.filter((f) => !listed.some((r) => r.id === f.id)), ...listed];
   const pending = (lists.data?.asBrand.requests ?? []).filter((r) => r.state === "pending");
   return (
     <div className="flex flex-col gap-[18px]">
@@ -68,31 +82,42 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
           <LicenceCard
             key={l.id}
             l={l}
-            stills={(renders.data?.asBrand ?? []).filter((r) => r.licenceId === l.id && r.type === "image")}
-            onRendered={async () => Promise.all([lists.reload(), renders.reload(), refresh()]).then(() => {})}
+            stills={allRenders.filter((r) => r.licenceId === l.id && r.type === "image")}
+            videoFrom={videoFrom?.licenceId === l.id ? videoFrom.renderId : null}
+            onRendered={async (render) => {
+              setFresh((f) => [asRow(render, l), ...f]);
+              setHighlight(render.id);
+              await Promise.all([lists.reload(), renders.reload(), refresh()]);
+            }}
           />
         ))}
       </Card>
 
       <Card title="Your renders">
-        {(renders.data?.asBrand ?? []).length === 0 && <p className="m-0 text-grey">None yet.</p>}
-        {(renders.data?.asBrand ?? []).map((r) => (
-          <div key={r.id} className="flex flex-wrap items-center gap-3 border-b border-divider py-2 last:border-0">
-            <span className="font-semibold">{r.type === "video" ? "Video" : "Image"}</span>
-            <span className="text-grey">
-              {when(r.createdAt)} · {r.price} credits · {r.pipeline === "ffmpeg-fallback" ? "free fallback motion ad (ffmpeg)" : r.pipeline === "veo-3.1-lite" ? "Veo 3.1 Lite" : r.model}
-            </span>
-            <button type="button" onClick={() => openRender(r.id).catch((e) => setMsg(reason(e)))} className={pillClass("outline", "ml-auto min-h-10 px-4")}>
-              Download
-            </button>
-          </div>
+        {allRenders.length === 0 && <p className="m-0 text-grey">None yet.</p>}
+        {allRenders.map((r) => (
+          <RenderCard
+            key={r.id}
+            ref={(el) => {
+              if (el) cardRefs.current.set(r.id, el);
+            }}
+            r={r}
+            mode="brand"
+            highlight={r.id === highlight}
+            onMakeVideo={(x) => {
+              setVideoFrom({ licenceId: x.licenceId, renderId: x.id });
+              document.getElementById(`video-${x.licenceId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }}
+          />
         ))}
       </Card>
     </div>
   );
 }
 
-function LicenceCard({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]; onRendered: () => Promise<void> }) {
+type Made = Omit<Render, "creatorName" | "brandName" | "use">;
+
+function LicenceCard({ l, stills, videoFrom, onRendered }: { l: LicenceRow; stills: Render[]; videoFrom: string | null; onRendered: (r: Made) => Promise<void> }) {
   const [brief, setBrief] = useState("Smiling in a sunlit café holding a ceramic coffee cup, product shot for a spring campaign");
   const [aspect, setAspect] = useState<"1:1" | "16:9" | "9:16">("1:1");
   const [busy, setBusy] = useState<string | null>(null);
@@ -103,10 +128,9 @@ function LicenceCard({ l, stills, onRendered }: { l: LicenceRow; stills: Render[
     setErr(null);
     setOut(null);
     try {
-      const r = await api<{ render: { id: string; price: number } }>("/api/render/image", { method: "POST", body: JSON.stringify({ licenceId: l.id, brief, aspectRatio: aspect }) });
-      setOut(`Image ad ready: ${r.render.price} credits paid.`);
-      await onRendered();
-      await openRender(r.render.id);
+      const r = await api<{ render: Made }>("/api/render/image", { method: "POST", body: JSON.stringify({ licenceId: l.id, brief, aspectRatio: aspect }) });
+      setOut(`Image ad ready: ${r.render.price} credits paid. It's at the top of Your renders.`);
+      await onRendered(r.render);
     } catch (e) {
       setErr(reason(e));
     } finally {
@@ -140,7 +164,7 @@ function LicenceCard({ l, stills, onRendered }: { l: LicenceRow; stills: Render[
           </span>
         </>
       )}
-      {l.status === "Active" && l.videoAllowed && <VideoMaker l={l} stills={stills} onRendered={onRendered} />}
+      {l.status === "Active" && l.videoAllowed && <VideoMaker l={l} stills={stills} preselect={videoFrom} onRendered={onRendered} />}
       {busy && <span className="text-[14px] text-wait">{busy}</span>}
       {out && <span className="text-[14px] text-ok">{out}</span>}
       {err && <span role="alert" className="text-[14px] text-bad">{err}</span>}
@@ -148,8 +172,11 @@ function LicenceCard({ l, stills, onRendered }: { l: LicenceRow; stills: Render[
   );
 }
 
-function VideoMaker({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]; onRendered: () => Promise<void> }) {
+function VideoMaker({ l, stills, preselect, onRendered }: { l: LicenceRow; stills: Render[]; preselect: string | null; onRendered: (r: Made) => Promise<void> }) {
   const [from, setFrom] = useState("");
+  useEffect(() => {
+    if (preselect) setFrom(preselect);
+  }, [preselect]);
   const [prompt, setPrompt] = useState("She lifts the cup toward the camera and smiles, gentle push-in, warm café light");
   const [seconds, setSeconds] = useState<6 | 8>(6);
   const [aspect, setAspect] = useState<"16:9" | "9:16">("16:9");
@@ -163,13 +190,12 @@ function VideoMaker({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]
     setErr(null);
     setOut(null);
     try {
-      const r = await api<{ render: { id: string; price: number }; pipeline: string; note: string }>("/api/render/video", {
+      const r = await api<{ render: Made; pipeline: string; note: string }>("/api/render/video", {
         method: "POST",
         body: JSON.stringify({ licenceId: l.id, fromRenderId: from || stills[0].id, prompt, seconds, aspectRatio: aspect }),
       });
-      setOut(r.pipeline === "veo-3.1-lite" ? `Video ad ready (Veo 3.1 Lite): ${r.render.price} credits paid.` : `Veo didn't make this one, so you got the free fallback motion ad (no charge). ${r.note}`);
-      await onRendered();
-      await openRender(r.render.id);
+      setOut(r.pipeline === "veo-3.1-lite" ? `Video ad ready (Veo 3.1 Lite): ${r.render.price} credits paid. It's at the top of Your renders.` : `Veo didn't make this one, so you got the free fallback motion ad (no charge). ${r.note}`);
+      await onRendered(r.render);
     } catch (e) {
       setErr(reason(e));
     } finally {
@@ -177,7 +203,7 @@ function VideoMaker({ l, stills, onRendered }: { l: LicenceRow; stills: Render[]
     }
   };
   return (
-    <div className="mt-1 flex flex-col gap-2 border-t border-divider pt-2">
+    <div id={`video-${l.id}`} className="mt-1 flex flex-col gap-2 border-t border-divider pt-2">
       <b className="text-[14px]">Video ad (Veo 3.1 Lite) · {left > 0 ? `${left} left on this licence` : "limit reached"}</b>
       <label className="flex flex-col gap-1 text-[14px]">
         <span className="text-grey">Animate this licensed image</span>

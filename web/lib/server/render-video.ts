@@ -16,9 +16,9 @@ import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt } from "./filter";
 import { firestore } from "./firebase-admin";
-import { labelVideo, motionAd } from "./motion";
+import { labelVideo, motionAd, posterFrame } from "./motion";
 import { day, preflight, RenderRefused, settle, videosPerDay, type RenderDoc } from "./render-image";
-import { getObject } from "./storage";
+import { getObject, putObject } from "./storage";
 import { imageToVideo, veoEnabled, veoModel } from "./veo";
 
 export async function renderVideo(brandUid: string, input: { licenceId: string; fromRenderId: string; prompt: string; seconds: 6 | 8; aspectRatio: "16:9" | "9:16" }) {
@@ -36,6 +36,7 @@ export async function renderVideo(brandUid: string, input: { licenceId: string; 
   if (!raw) throw new RenderRefused(500, "the licensed still is missing");
 
   const [W, H] = input.aspectRatio === "16:9" ? [1280, 720] : [720, 1280];
+  const renderId = randomBytes(12).toString("base64url");
   const still = new Uint8Array(await sharp(raw).resize(W, H, { fit: "cover", position: "attention" }).jpeg({ quality: 94 }).toBuffer());
   let mp4: Uint8Array;
   let pipeline: RenderDoc["pipeline"];
@@ -59,8 +60,9 @@ export async function renderVideo(brandUid: string, input: { licenceId: string; 
   }
 
   const labelled = await labelVideo(mp4, W);
+  const previewObject = `renders/preview/${renderId}.jpg`;
+  await putObject(previewObject, await posterFrame(labelled), "image/jpeg");
   const creator = await getCreator(licence.creatorId);
-  const renderId = randomBytes(12).toString("base64url");
   const signed = embedManifest(labelled, "video/mp4", {
     protocol: "likeness-ai/1",
     licenceId: licence.id,
@@ -86,6 +88,8 @@ export async function renderVideo(brandUid: string, input: { licenceId: string; 
     pipeline,
     pipelineNote: note,
     fromRenderId: from.id,
+    previewObject,
+    aspect: input.aspectRatio,
     price: pipeline === "veo-3.1-lite" ? price : 0,
   });
   return { render, receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, pipeline, note, veoMs };

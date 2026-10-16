@@ -48,6 +48,9 @@ export type RenderDoc = {
   createdAt: number;
   /** Image only: the unlabelled still, kept private, which a video ad can start from. */
   rawObject?: string;
+  /** A small labelled preview (images) or poster frame (videos) for the dashboards. */
+  previewObject?: string;
+  aspect?: "1:1" | "16:9" | "9:16";
   /** Video only: which pipeline made it, and the licensed still it started from. */
   pipeline?: "veo-3.1-lite" | "ffmpeg-fallback";
   fromRenderId?: string;
@@ -93,6 +96,8 @@ export async function settle(input: {
   fromRenderId?: string;
   pipelineNote?: string;
   rawObject?: string;
+  previewObject?: string;
+  aspect?: RenderDoc["aspect"];
   /** Overrides the licence price (the free ffmpeg fallback is 0). */
   price?: number;
 }): Promise<{ render: RenderDoc; receipt: Awaited<ReturnType<typeof signPayload>> }> {
@@ -140,6 +145,8 @@ export async function settle(input: {
     ...(input.fromRenderId ? { fromRenderId: input.fromRenderId } : {}),
     ...(input.pipelineNote ? { pipelineNote: input.pipelineNote } : {}),
     ...(input.rawObject ? { rawObject: input.rawObject } : {}),
+    ...(input.previewObject ? { previewObject: input.previewObject } : {}),
+    ...(input.aspect ? { aspect: input.aspect } : {}),
   };
   await db().runTransaction(async (tx) => {
     const lref = db().collection("licences").doc(l0.id);
@@ -205,6 +212,8 @@ export async function renderImage(brandUid: string, licenceId: string, brief: st
     promptSha256: createHash("sha256").update(brief).digest("hex"),
     createdAt: new Date().toISOString(),
   });
-  const { render, receipt } = await settle({ brandUid, licence, type: "image", bytes: signed, mime: "image/jpeg", model: out.model, brief, renderId, rawObject });
+  const previewObject = `renders/preview/${renderId}.jpg`;
+  await putObject(previewObject, await sharp(labelled).resize({ width: 480, withoutEnlargement: true }).jpeg({ quality: 80 }).toBuffer(), "image/jpeg");
+  const { render, receipt } = await settle({ brandUid, licence, type: "image", bytes: signed, mime: "image/jpeg", model: out.model, brief, renderId, rawObject, previewObject, aspect: aspectRatio });
   return { render, receipt: { keyVersion: receipt.keyVersion, alg: receipt.alg }, filter };
 }

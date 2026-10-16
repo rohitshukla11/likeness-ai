@@ -31,8 +31,18 @@ const day = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 export async function verifyFile(bytes: Uint8Array, mime: string): Promise<VerifyResult> {
   const sha256 = createHash("sha256").update(bytes).digest("hex");
-  const notes: string[] = [];
   const m: ManifestRead = await readManifest(bytes, mime).catch(() => ({ present: false }) as ManifestRead);
+  return verifyCore(sha256, m, []);
+}
+
+/** Check a render by its receipt key (sha256 of the file) without the file: no C2PA check. */
+export async function verifyHash(sha256: string): Promise<VerifyResult> {
+  if (!/^[0-9a-f]{64}$/.test(sha256)) throw Object.assign(new Error("bad sha256"), { status: 400 });
+  return verifyCore(sha256, null, ["Checked by its receipt (the file's sha256) without the file itself, so its content credential wasn't read. Upload the file to check that too."]);
+}
+
+async function verifyCore(sha256: string, m: ManifestRead | null, notes: string[]): Promise<VerifyResult> {
+  if (!m) m = { present: false };
   const manifest: VerifyResult["manifest"] = m.present
     ? { present: true, signatureValid: m.signatureValid, trustedSigner: m.trustedSigner, issuer: m.signer.issuer ?? m.signer.commonName, licenceId: m.licence?.licenceId }
     : { present: false };

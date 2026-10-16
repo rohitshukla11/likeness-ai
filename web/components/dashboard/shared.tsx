@@ -19,8 +19,18 @@ export type Render = {
   fee: number;
   brief: string;
   createdAt: number;
-  pipeline?: string;
+  pipeline?: "veo-3.1-lite" | "ffmpeg-fallback";
+  pipelineNote?: string;
+  fromRenderId?: string;
+  aspect?: "1:1" | "16:9" | "9:16";
+  hasPreview?: boolean;
+  creatorName: string;
+  brandName: string;
+  use: string;
 };
+
+export const pipelineLabel = (r: Pick<Render, "type" | "pipeline" | "model">) =>
+  r.type === "image" ? `Gemini (${r.model})` : r.pipeline === "veo-3.1-lite" ? "Veo 3.1 Lite" : "Free fallback motion ad (ffmpeg)";
 export type Lists = {
   asCreator: { requests: RequestDoc[]; licences: LicenceRow[] };
   asBrand: { requests: RequestDoc[]; licences: LicenceRow[] };

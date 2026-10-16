@@ -1,6 +1,6 @@
 import { HttpError } from "@/lib/server/http";
 import { route } from "@/lib/server/route";
-import { verifyFile } from "@/lib/server/verify";
+import { verifyFile, verifyHash } from "@/lib/server/verify";
 
 export const maxDuration = 60;
 
@@ -13,3 +13,6 @@ export const POST = route(async (req) => {
   const mime = file.type || (file.name.endsWith(".mp4") ? "video/mp4" : file.name.endsWith(".png") ? "image/png" : "image/jpeg");
   return verifyFile(new Uint8Array(await file.arrayBuffer()), mime);
 });
+
+/** Check a render by its receipt key: GET /api/verify?sha=<sha256 of the file>. */
+export const GET = route(async (req) => verifyHash(String(new URL(req.url).searchParams.get("sha") ?? "")));

@@ -1,13 +1,23 @@
 import { firestore } from "@/lib/server/firebase-admin";
 import { authed } from "@/lib/server/route";
+import type { LicenceDoc } from "@/lib/model";
 import type { RenderDoc } from "@/lib/server/render-image";
 
-/** Renders I paid for (brand) or that used my likeness (creator). */
+/** Renders I paid for (brand) or that used my likeness (creator), with each licence's names and use. */
 export const GET = authed(async (_req, me) => {
-  const [b, c] = await Promise.all([
-    firestore().collection("renders").where("brandId", "==", me.uid).limit(100).get(),
-    firestore().collection("renders").where("creatorId", "==", me.uid).limit(100).get(),
-  ]);
-  const newest = (x: RenderDoc, y: RenderDoc) => y.createdAt - x.createdAt;
-  return { asBrand: b.docs.map((d) => d.data() as RenderDoc).sort(newest), asCreator: c.docs.map((d) => d.data() as RenderDoc).sort(newest) };
+  const db = firestore();
+  const [b, c] = await Promise.all([db.collection("renders").where("brandId", "==", me.uid).limit(100).get(), db.collection("renders").where("creatorId", "==", me.uid).limit(100).get()]);
+  const all = [...b.docs, ...c.docs].map((d) => d.data() as RenderDoc);
+  const ids = [...new Set(all.map((r) => r.licenceId))];
+  const lic = ids.length ? await db.getAll(...ids.map((id) => db.collection("licences").doc(id))) : [];
+  const byId = new Map(lic.map((s) => [s.id, s.data() as LicenceDoc | undefined]));
+  const shape = (r: RenderDoc) => {
+    const l = byId.get(r.licenceId);
+    // The private storage paths stay on the server.
+    const { object: _o, rawObject: _r, previewObject: _p, ...pub } = r;
+    void _o, void _r, void _p;
+    return { ...pub, hasPreview: !!r.previewObject, creatorName: l?.creatorName ?? "", brandName: l?.brandName ?? "", use: l?.use ?? "" };
+  };
+  const newest = (x: { createdAt: number }, y: { createdAt: number }) => y.createdAt - x.createdAt;
+  return { asBrand: b.docs.map((d) => shape(d.data() as RenderDoc)).sort(newest), asCreator: c.docs.map((d) => shape(d.data() as RenderDoc)).sort(newest) };
 });

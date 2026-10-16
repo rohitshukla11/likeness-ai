@@ -42,6 +42,15 @@ async function inTmp<T>(f: (dir: string) => Promise<T>): Promise<T> {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
+/** A poster frame (JPEG, 480 px wide) from about a second into the video. */
+export async function posterFrame(mp4: Uint8Array): Promise<Uint8Array> {
+  return inTmp(async (dir) => {
+    await writeFile(path.join(dir, "in.mp4"), mp4);
+    await run(["-ss", "1", "-i", path.join(dir, "in.mp4"), "-frames:v", "1", "-vf", "scale=480:-2", "-q:v", "4", path.join(dir, "poster.jpg")]);
+    return new Uint8Array(await readFile(path.join(dir, "poster.jpg")));
+  });
+}
+
 /** Burn the label in, bottom-right, at the same share of the width as on images. */
 export async function labelVideo(mp4: Uint8Array, width: number): Promise<Uint8Array> {
   return inTmp(async (dir) => {
