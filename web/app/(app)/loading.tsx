@@ -1,6 +1,6 @@
 import { Page, Skeleton } from "@/components/ds";
 
-/** Shown while a server page reads the chain. Shapes only; no numbers until they are real. */
+/** Shown while a server page loads its data. Shapes only; no numbers until they are real. */
 export default function Loading() {
   return (
     <div role="status" aria-label="Loading">

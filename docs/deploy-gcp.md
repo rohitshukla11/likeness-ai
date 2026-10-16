@@ -36,7 +36,8 @@ sh scripts/deploy-gcp.sh PROJECT_ID
 
 It creates the Artifact Registry repository and the two secrets once, builds the image with Cloud Build
 (Next.js standalone, face-matcher models baked in, ffmpeg for the video fallback), and deploys Cloud Run
-service `likeness` as `likeness-run` with `--allow-unauthenticated`, 2 vCPU / 2 GiB, 0–3 instances.
+service `likeness` as `likeness-run` with `--allow-unauthenticated`, 2 vCPU / 2 GiB, 0–3 instances, a 600 s
+request timeout (a video ad can take two Veo calls when the quality gate retries).
 Then add the printed `*.run.app` domain to **Firebase → Authentication → Settings → Authorized domains**,
 and open `/status`: every Google service should show "configured".
 

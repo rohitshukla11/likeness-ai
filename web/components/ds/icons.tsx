@@ -86,7 +86,7 @@ export const IconCamera = ({ size, className }: P) => (
 );
 
 /** The verified rosette from the marketplace mockup; carries its own accessible name. */
-export const VerifiedMark = ({ size = 20, label = "Verified human" }: { size?: number; label?: string }) => (
+export const VerifiedMark = ({ size = 20, label = "Verified creator" }: { size?: number; label?: string }) => (
   <svg role="img" aria-label={label} viewBox="0 0 24 24" width={size} height={size} className="shrink-0">
     <path d="M12 2l2.6 2.2 3.4-.4.8 3.3 3 1.6-1.3 3.2 1.3 3.2-3 1.6-.8 3.3-3.4-.4L12 22l-2.6-2.2-3.4.4-.8-3.3-3-1.6 1.3-3.2-1.3-3.2 3-1.6.8-3.3 3.4.4z" fill="#121316" />
     <path d="M8 12l3 3 5-6" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />

@@ -158,10 +158,10 @@ function Stats() {
               </span>
             </div>
             <span className="mt-auto self-start rounded-full bg-violet-deep px-3.5 py-1.5 text-[13px] font-semibold text-white">For brands</span>
-            <h3 className="m-0 font-display text-[clamp(20px,2.4vw,26px)] font-extrabold">VERIFIED HUMANS ONLY</h3>
+            <h3 className="m-0 font-display text-[clamp(20px,2.4vw,26px)] font-extrabold">VERIFIED CREATORS ONLY</h3>
             <p className="m-0 max-w-[460px] text-[15px] leading-relaxed text-[#3E4148]">
-              Every creator passed an ID check, a liveness selfie and a face match. Their photos were captured live, so nobody can license a face that
-              isn&apos;t theirs.
+              Every creator proved they own their YouTube channel and passed a live face check (blink, turn) matched to the channel&apos;s avatar.
+              Their reference photos were captured live from the camera, never uploaded.
             </p>
           </article>
           <div className="flex min-w-0 flex-[1_1_300px] flex-col gap-5">
@@ -233,7 +233,7 @@ function HowItWorks() {
           </ol>
           <div className={`${c("rv")} flex min-w-0 flex-[1_1_440px] flex-col gap-[18px]`} style={{ transitionDelay: ".3s" }}>
             <p className="m-0 text-[16px] leading-relaxed text-[#3E4148]">
-              Political, adult and deceptive uses are banned in the contract itself. You choose everything else, and you can pull a licence back in one
+              Political, adult, minor-involving, impersonating and deceptive uses are refused under every licence, checked before every render. You choose everything else, and you can pull a licence back in one
               click.
             </p>
             <div className="relative aspect-[5/4] overflow-hidden rounded-[28px] bg-[#25B6D2]">

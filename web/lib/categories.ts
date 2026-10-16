@@ -1,6 +1,6 @@
 /**
- * Use categories and regions, bit for bit as in contracts/src/Categories.sol. The banned set is a
- * constant on chain; it is mirrored here only to show it, and every licence is checked by the contract.
+ * Use categories and regions. The banned set is never allowed under any licence: every prompt is checked
+ * against it (lib/server/filter.ts) before a render.
  */
 
 export const BANNED = [
@@ -23,7 +23,7 @@ export const ALLOWED_MASK = CATEGORIES.reduce((m, c) => m | c.bit, 0);
 
 export type CategoryKey = (typeof CATEGORIES)[number]["key"];
 
-/** Region bits are an app convention (the contract only requires a non-empty mask). */
+/** Region bits: defined for licence terms, not used by the licence flow yet. */
 export const REGIONS = [
   { bit: 1 << 0, key: "na", label: "North America" },
   { bit: 1 << 1, key: "latam", label: "Latin America" },

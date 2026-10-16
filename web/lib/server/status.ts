@@ -49,13 +49,13 @@ export async function statusChecks(): Promise<Check[]> {
       await new Storage().bucket(gcp.bucket()).file("status/probe").exists();
       return `${gcp.bucket()} reachable`;
     }),
-    check("vertex-gemini", "Vertex AI Gemini (image + safety filter)", async () => {
+    check("vertex-gemini", "Vertex AI Gemini (images, creative assistant, safety filter)", async () => {
       if (!project) throw new Error("no project");
       return `${geminiModels.image()} and ${geminiModels.filter()} on the global endpoint`;
     }),
     check("veo", "Vertex AI Veo 3.1 Lite (video)", async () => {
       if (!project) throw new Error("no project");
-      return `${process.env.VEO_MODEL || "veo-3.1-lite-generate-001"} in us-central1 (video ads, phase 2)`;
+      return `${process.env.VEO_MODEL || "veo-3.1-lite-generate-001"} in us-central1 (video ads)`;
     }),
     check("youtube", "YouTube Data API v3 (channel verification)", async () => "channels.list with the creator's own youtube.readonly token"),
     check("face-models", "Face matcher (YuNet + AuraFace, on this server)", async () => {
