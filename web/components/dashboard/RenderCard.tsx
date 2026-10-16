@@ -8,7 +8,7 @@ import { forwardRef, useCallback, useEffect, useRef, useState } from "react";
 import { pillClass } from "@/components/ds";
 import { api, reason } from "@/lib/client/firebase";
 import { useLabel } from "@/lib/model";
-import { pipelineLabel, when, type Render } from "./shared";
+import { gateLine, pipelineLabel, when, type Render } from "./shared";
 
 type Signed = { url: string | null; mime: string | null; expiresAt?: number };
 
@@ -98,6 +98,13 @@ export const RenderCard = forwardRef<HTMLDivElement, { r: Render; mode: "brand" 
           {mode === "brand" ? `Creator: ${r.creatorName}` : `Brand: ${r.brandName}`} · {useLabel(r.use)} · licence {r.licenceId.slice(0, 8)}
         </span>
         {r.pipelineNote && r.pipeline === "ffmpeg-fallback" && <span className="text-[13px] text-wait">{r.pipelineNote}</span>}
+        {r.gate && (
+          <span className={`text-[13px] ${r.gate.outcome.startsWith("passed") ? "text-ok" : "text-wait"}`}>
+            {gateLine(r.gate)}
+            {r.gate.attempts.length > 1 && ` Veo attempts: ${r.gate.attempts.map((a) => (a.passed ? "passed" : "failed")).join(", ")}.`}
+          </span>
+        )}
+        {r.type === "video" && (r.resolution || r.framing) && <span className="text-[13px] text-grey">{[r.resolution, r.framing].filter(Boolean).join(" · ")}</span>}
         <span className="text-[13px] text-grey">&ldquo;{r.brief.length > 120 ? `${r.brief.slice(0, 117)}…` : r.brief}&rdquo;</span>
         <span className="mt-1 flex flex-wrap gap-2">
           {r.type === "video" && (

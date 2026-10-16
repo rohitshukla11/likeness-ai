@@ -8,16 +8,19 @@ import "server-only";
  * provenance signal next to our C2PA manifest and KMS-signed receipt.
  */
 import { generateContent, geminiModels } from "../gemini";
+import { stillRules, type Aspect } from "@/lib/creative";
 import type { RenderInput, RenderOutput } from "./types";
 
 const MAX_REFERENCES = 3;
 
-export function referencePrompt(prompt: string, n: number): string {
+/** The brief, then our framing rules for the aspect: always appended, so a short brief can't frame the face out. */
+export function referencePrompt(prompt: string, n: number, aspect: Aspect = "1:1"): string {
   return [
     `The ${n === 1 ? "image shows" : `${n} images show`} one real, consenting adult who has licensed their likeness for this image.`,
     "Generate a new photorealistic image of exactly this person, keeping their face, identity and likeness faithful to the reference photos.",
     "Do not add text, logos or watermarks unless asked.",
     `Brief: ${prompt}`,
+    stillRules(aspect),
   ].join("\n");
 }
 
@@ -30,7 +33,7 @@ export async function geminiRender(input: RenderInput): Promise<RenderOutput> {
         role: "user",
         parts: [
           ...refs.map((r) => ({ inlineData: { mimeType: "image/jpeg", data: Buffer.from(r).toString("base64") } })),
-          { text: referencePrompt(input.prompt, refs.length) },
+          { text: referencePrompt(input.prompt, refs.length, input.aspectRatio ?? "1:1") },
         ],
       },
     ],

@@ -2,8 +2,9 @@ import "server-only";
 /**
  * Veo 3.1 Lite image-to-video on Vertex AI (us-central1, the model's only region):
  *   POST …/models/veo-3.1-lite-generate-001:predictLongRunning, then poll :fetchPredictOperation.
- * personGeneration "allow_adult" (Google's default: adults only). Durations 4, 6 or 8 s; 720p; 16:9 or
- * 9:16; silent unless asked. Price (Vertex pricing page): $0.03 per second of 720p video without audio.
+ * personGeneration "allow_adult" (Google's default: adults only). Durations 4, 6 or 8 s; 720p, or 1080p
+ * for 8 s clips; 16:9 or 9:16; silent unless asked. Price without audio: $0.03 per second at 720p
+ * (Vertex pricing page); about $0.05 per second at 1080p (third-party price lists, not yet confirmed).
  * A refusal comes back as an error or as zero videos with raiMediaFilteredReasons; both are VeoRefused,
  * so the caller can fall back and say why.
  */
@@ -33,7 +34,9 @@ export async function imageToVideo(input: {
   prompt: string;
   seconds: 4 | 6 | 8;
   aspectRatio: "16:9" | "9:16";
+  resolution?: "720p" | "1080p";
   audio?: boolean;
+  timeoutMs?: number;
 }): Promise<{ bytes: Uint8Array; model: string; ms: number }> {
   const project = requireProject();
   const model = veoModel();
@@ -41,10 +44,11 @@ export async function imageToVideo(input: {
   const t = Date.now();
   const op = await call(`${base}:predictLongRunning`, {
     instances: [{ prompt: input.prompt, image: { bytesBase64Encoded: Buffer.from(input.image).toString("base64"), mimeType: input.mime } }],
-    parameters: { durationSeconds: input.seconds, resolution: "720p", aspectRatio: input.aspectRatio, generateAudio: !!input.audio, personGeneration: "allow_adult", sampleCount: 1 },
+    parameters: { durationSeconds: input.seconds, resolution: input.resolution ?? "720p", aspectRatio: input.aspectRatio, generateAudio: !!input.audio, personGeneration: "allow_adult", sampleCount: 1 },
   });
   for (;;) {
-    if (Date.now() - t > 240_000) throw new VeoRefused("Veo took longer than 4 minutes");
+    const limit = input.timeoutMs ?? 240_000;
+    if (Date.now() - t > limit) throw new VeoRefused(`Veo took longer than ${Math.round(limit / 1000)} s`);
     await new Promise((r) => setTimeout(r, 5_000));
     const r = await call(`${base}:fetchPredictOperation`, { operationName: op.name });
     if (!r.done) continue;

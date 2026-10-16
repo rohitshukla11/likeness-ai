@@ -26,10 +26,23 @@ export type Render = {
   hasPreview?: boolean;
   /** An unlabelled still is kept, so a video ad can animate it (image ads from before Phase 2 have none). */
   hasRaw?: boolean;
+  /** Video only: the quality gate (see lib/server/gate.ts), resolution, and how the still was framed. */
+  gate?: GateSummary;
+  resolution?: "720p" | "1080p";
+  framing?: string;
   creatorName: string;
   brandName: string;
   use: string;
 };
+
+type GateCheck = { passed: boolean; frames: number; visible: number; matched: number; need: number; threshold: number; medianSimilarity: number | null; minSimilarity: number | null; reason: string };
+export type GateSummary = GateCheck & { attempts: GateCheck[]; outcome: string };
+
+export function gateLine(g: GateSummary): string {
+  const sim = g.medianSimilarity === null ? "" : `, median match ${g.medianSimilarity.toFixed(2)} (threshold ${g.threshold})`;
+  const head = g.outcome === "passed" || g.outcome === "passed on retry" ? `Quality gate ${g.outcome}` : `Quality gate: ${g.outcome}`;
+  return `${head}: face fully visible in ${g.visible}/${g.frames} frames, matches the creator in ${g.matched}/${g.frames}${sim}.`;
+}
 
 export const pipelineLabel = (r: Pick<Render, "type" | "pipeline" | "model">) =>
   r.type === "image" ? `Gemini (${r.model})` : r.pipeline === "veo-3.1-lite" ? "Veo 3.1 Lite" : "Free fallback motion ad (ffmpeg)";

@@ -151,6 +151,11 @@ export function withVideoDefaults<T extends Omit<LicenceDoc, "videoAllowed" | "m
   return { ...l, videoAllowed: l.videoAllowed ?? true, maxVideos: l.maxVideos ?? Math.min(3, l.maxRenders), videoCount: l.videoCount ?? 0 };
 }
 
+export type VideoResolution = "720p" | "1080p";
+
+/** 1080p (8-second clips only) costs twice the licence's video price; 720p is the default. */
+export const videoPrice = (l: Pick<LicenceDoc, "pricePerVideo">, resolution: VideoResolution = "720p") => (resolution === "1080p" ? l.pricePerVideo * 2 : l.pricePerVideo);
+
 export function videoRefusal(l: Pick<LicenceDoc, "videoAllowed" | "maxVideos" | "videoCount">, videosToday: number, perDay: number): string | null {
   if (!l.videoAllowed) return "this creator doesn't allow video ads under this licence";
   if ((l.videoCount ?? 0) >= l.maxVideos) return `this licence's video limit (${l.maxVideos}) is used up`;

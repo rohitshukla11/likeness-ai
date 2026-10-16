@@ -12,10 +12,12 @@ const isMp4 = (b: Uint8Array) => Buffer.from(b.subarray(4, 8)).toString() === "f
 describe.skipIf(!haveFfmpeg)("ffmpeg motion ad (fallback)", () => {
   it("makes a labelled 16:9 H.264 MP4 with a C2PA manifest from a still", async () => {
     const still = new Uint8Array(await sharp({ create: { width: 1024, height: 1024, channels: 3, background: "#c9a27e" } }).jpeg().toBuffer());
-    const ad = await motionAd({ still, caption: "Spring oat latte, now in store", brand: "Brew & Co.", aspectRatio: "16:9", seconds: 6 });
+    const ad = await motionAd({ still, brand: "Brew & Co.", aspectRatio: "16:9", seconds: 6 });
     expect(isMp4(ad)).toBe(true);
-    const labelled = await labelVideo(ad, 1280);
+    // A face on the left of the frame moves the label off bottom-left.
+    const { bytes: labelled, corner } = await labelVideo(ad, 1280, 720, [{ x: 100, y: 200, w: 220, h: 280 }]);
     expect(isMp4(labelled)).toBe(true);
+    expect(corner).toBe("bottom-right");
     if (!haveCert) return;
     const signed = embedManifest(labelled, "video/mp4", {
       protocol: "likeness-ai/1", licenceId: "L", renderIndex: 0, renderType: "video",

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { videoRefusal, withVideoDefaults, type LicenceDoc } from "./model";
+import { videoPrice, videoRefusal, withVideoDefaults, type LicenceDoc } from "./model";
+import { stillRules, veoPrompt } from "./creative";
 
 describe("video caps", () => {
   const l = { videoAllowed: true, maxVideos: 3, videoCount: 0 };
@@ -24,5 +25,21 @@ describe("licences approved before video ads", () => {
   });
   it("keep their own video terms when set", () => {
     expect(withVideoDefaults({ ...old, videoAllowed: false, maxVideos: 1, videoCount: 1 })).toMatchObject({ videoAllowed: false, maxVideos: 1, videoCount: 1 });
+  });
+});
+
+describe("video price and prompts", () => {
+  it("charges twice the video price for 1080p", () => {
+    expect(videoPrice({ pricePerVideo: 200 })).toBe(200);
+    expect(videoPrice({ pricePerVideo: 200 }, "1080p")).toBe(400);
+  });
+  it("always appends the framing rules to stills and the motion and framing rules to Veo", () => {
+    expect(stillRules("9:16")).toMatch(/full head and face visible/);
+    expect(stillRules("9:16")).toMatch(/centre third/);
+    const p = veoPrompt("She lifts the cup", "16:9");
+    expect(p.startsWith("She lifts the cup")).toBe(true);
+    expect(p).toMatch(/full face stays in frame/);
+    expect(p).toMatch(/eyes in the upper third/);
+    expect(veoPrompt("x", "16:9", true)).toMatch(/no zoom-in/);
   });
 });

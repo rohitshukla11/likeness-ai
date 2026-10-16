@@ -5,7 +5,8 @@
  * second render refused → verify Revoked.
  *
  *   pnpm e2e:smoke demo-maya-okafor            image only
- *   pnpm e2e:smoke demo-maya-okafor --video    plus one Veo video (6 s, 720p, about $0.18) and one free fallback video
+ *   pnpm e2e:smoke demo-maya-okafor --video    a 16:9 still, plus one Veo video (6 s, 720p, about $0.18; $0.36 if the
+ *                                              quality gate retries) and one free fallback video
  */
 import { writeFileSync, mkdirSync } from "node:fs";
 import { balance, saveBrand, topUp } from "@/lib/server/accounts";
@@ -30,7 +31,7 @@ async function main() {
   const { licence } = await decide(creatorId, req.id, true);
   log("licence", licence!.id, "image price", licence!.pricePerImage);
   const t = Date.now();
-  const r = await renderImage(brand, licence!.id, "Smiling in a sunlit café holding a ceramic coffee cup, product shot for a spring campaign", "1:1");
+  const r = await renderImage(brand, licence!.id, "Smiling in a sunlit café holding a ceramic coffee cup, product shot for a spring campaign", VIDEO ? "16:9" : "1:1");
   log("render", r.render.id, `${Date.now() - t} ms`, r.render.model, "price", r.render.price, "creator", r.render.creatorShare, "fee", r.render.fee);
   log("balances: brand", await balance(brand), "creator", await balance(creatorId));
   const file = await fileOf(r.render.id);
@@ -42,12 +43,13 @@ async function main() {
     const tv = Date.now();
     const v = await renderVideo(brand, { licenceId: licence!.id, fromRenderId: r.render.id, prompt: "She lifts the cup toward the camera and smiles, gentle push-in, warm café light", seconds: 6, aspectRatio: "16:9" });
     log("video", v.render.id, `${Date.now() - tv} ms`, v.pipeline, "price", v.render.price, "|", v.note);
+    log("quality gate:", v.gate.outcome, "|", v.gate.reason, "| median", v.gate.medianSimilarity);
     const vf = await fileOf(v.render.id);
     writeFileSync("../.secrets/ai/e2e/video-veo.mp4", vf);
     const vv = await verifyFile(new Uint8Array(vf), "video/mp4");
     log("verify video:", vv.verdict, "|", vv.headline, "| receipt valid", vv.receipt?.valid, "| c2pa", vv.manifest.present, vv.manifest.signatureValid, "matches", vv.manifest.matchesReceipt);
     process.env.VEO_DISABLED = "1";
-    const fb = await renderVideo(brand, { licenceId: licence!.id, fromRenderId: r.render.id, prompt: "Spring oat latte, now in store", seconds: 6, aspectRatio: "9:16" });
+    const fb = await renderVideo(brand, { licenceId: licence!.id, fromRenderId: r.render.id, prompt: "Spring oat latte, now in store", seconds: 6, aspectRatio: "16:9" });
     delete process.env.VEO_DISABLED;
     log("fallback video", fb.pipeline, "price", fb.render.price, "|", fb.note);
     const ff = await fileOf(fb.render.id);

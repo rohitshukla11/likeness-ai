@@ -1,7 +1,7 @@
 import "server-only";
 /**
- * Local 1:1 face match for VERIFICATION_LEVEL=free: is this reference photo the same person as the
- * Didit liveness selfie? Runs on this server, in memory; nothing is written or sent anywhere.
+ * Local face detection and 1:1 matching: is the live capture the same person as the channel avatar, and
+ * is the creator's face fully in frame in a video ad? Runs on this server, in memory.
  *
  *   detect (YuNet, OpenCV Zoo, MIT weights) → 5 landmarks → similarity transform to the standard
  *   112×112 ArcFace template (as OpenCV FaceRecognizerSF::alignCrop) → embed (AuraFace v1
@@ -65,7 +65,7 @@ async function load() {
 }
 
 type Image = { data: Uint8Array; width: number; height: number }; // RGB, upright
-type Face = { score: number; box: [number, number, number, number]; landmarks: [number, number][] };
+export type Face = { score: number; box: [number, number, number, number]; landmarks: [number, number][] };
 
 async function decode(bytes: Uint8Array): Promise<Image> {
   const { data, info } = await sharp(bytes).rotate().removeAlpha().toColourspace("srgb").raw().toBuffer({ resolveWithObject: true });
@@ -188,7 +188,7 @@ async function embed(img: Image, face: Face): Promise<Float32Array> {
   return v.map((x) => x / norm);
 }
 
-/** Add a dark border: detectors miss faces that fill the whole frame (Didit's selfie is a tight crop). */
+/** Add a dark border: detectors miss faces that fill the whole frame (a liveness capture can be a tight crop). */
 async function padded(img: Image): Promise<Image> {
   const m = Math.round(Math.max(img.width, img.height) * 0.4);
   const { data, info } = await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 3 } })
@@ -207,7 +207,7 @@ async function onlyFace(bytes: Uint8Array, label: string): Promise<{ img: Image;
     faces = await detectFaces(img);
   }
   if (faces.length === 0) throw new FaceMatchError(422, `no face found in ${label}`);
-  // Captures must show exactly one face; Didit's selfie crop is one face by construction.
+  // Captures must show exactly one face.
   if (faces.length > 1 && faces[1].score > 0.9) throw new FaceMatchError(422, `${label} shows more than one face`);
   return { img, face: faces[0] };
 }
@@ -244,3 +244,36 @@ export async function facesIn(bytes: Uint8Array): Promise<{ count: number; best:
   img.data.fill(0);
   return { count: faces.length, best: faces[0]?.score ?? 0 };
 }
+
+/**
+ * Faces in one image, in its own pixel coordinates (best first), and optionally the best face's
+ * embedding. No padding retry: a face cut by the frame edge should count as cut. Used for
+ * face-aware cropping and the video quality gate. The decoded pixels are zeroed after use.
+ */
+export async function analyseFaces(bytes: Uint8Array, opts: { embed?: boolean; minScore?: number } = {}): Promise<{ width: number; height: number; faces: Face[]; embedding: Float32Array | null }> {
+  const img = await decode(bytes);
+  try {
+    const faces = await detectFaces(img, opts.minScore ?? 0.8);
+    const embedding = opts.embed && faces[0] ? await embed(img, faces[0]) : null;
+    return { width: img.width, height: img.height, faces, embedding };
+  } finally {
+    img.data.fill(0);
+  }
+}
+
+/** Embeddings of a creator's reference frames (tight liveness crops, so padded like the match). */
+export async function referenceEmbeddings(frames: Uint8Array[]): Promise<Float32Array[]> {
+  const out: Float32Array[] = [];
+  for (const f of frames) {
+    const { img, face } = await onlyFace(f, "a reference frame").catch(() => ({ img: null, face: null }));
+    if (!img || !face) continue;
+    try {
+      out.push(await embed(img, face));
+    } finally {
+      img.data.fill(0);
+    }
+  }
+  return out;
+}
+
+export const cosine = (a: Float32Array, b: Float32Array) => a.reduce((s, x, i) => s + x * b[i], 0);

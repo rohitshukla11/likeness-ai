@@ -12,7 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { CATEGORIES } from "@/lib/categories";
 import sharp from "sharp";
-import { creatorFee, licenceStatus, videoRefusal, withVideoDefaults, type LicenceDoc, type ReceiptPayload } from "@/lib/model";
+import { creatorFee, licenceStatus, videoRefusal, withVideoDefaults, type LicenceDoc, type ReceiptPayload, type VideoResolution } from "@/lib/model";
 import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt, type FilterResult } from "./filter";
@@ -24,6 +24,7 @@ import { signPayload } from "./receipts";
 import { geminiRender } from "./render/gemini";
 import { putObject } from "./storage";
 import { openFrames } from "./vault";
+import type { GateRecord } from "./gate";
 
 const db = () => firestore();
 export const rendersPerDay = () => Number(process.env.RENDERS_PER_DAY ?? 40);
@@ -55,6 +56,10 @@ export type RenderDoc = {
   pipeline?: "veo-3.1-lite" | "ffmpeg-fallback";
   fromRenderId?: string;
   pipelineNote?: string;
+  /** Video only: the quality gate's result, the resolution, and how the still was framed for Veo. */
+  gate?: GateRecord;
+  resolution?: VideoResolution;
+  framing?: string;
 };
 
 export class RenderRefused extends HttpError {
@@ -75,13 +80,13 @@ export function publicRender(r: RenderDoc) {
 }
 
 /** Checks shared by image and video renders. Returns the licence and price. */
-export async function preflight(brandUid: string, licenceId: string, type: "image" | "video"): Promise<{ licence: LicenceDoc; price: number }> {
+export async function preflight(brandUid: string, licenceId: string, type: "image" | "video", priceOf?: (l: LicenceDoc) => number): Promise<{ licence: LicenceDoc; price: number }> {
   const l = await getLicence(licenceId);
   if (!l) throw new RenderRefused(404, "no such licence");
   if (l.brandId !== brandUid) throw new RenderRefused(403, "this licence belongs to another brand");
   const status = licenceStatus(l);
   if (status !== "Active") throw new RenderRefused(409, `render refused: the licence is ${status.toLowerCase()}`);
-  const price = type === "video" ? l.pricePerVideo : l.pricePerImage;
+  const price = priceOf ? priceOf(l) : type === "video" ? l.pricePerVideo : l.pricePerImage;
   const bal = Number((await db().collection("credits").doc(brandUid).get()).data()?.balance ?? 0);
   if (bal < price) throw new RenderRefused(402, `not enough demo credits: this ${type} costs ${price}, you have ${bal}`);
   const used = Number((await db().collection("usage").doc(day()).get()).data()?.renders ?? 0);
@@ -105,8 +110,9 @@ export async function settle(input: {
   rawObject?: string;
   previewObject?: string;
   aspect?: RenderDoc["aspect"];
-  /** Overrides the licence price (the free ffmpeg fallback is 0). */
+  /** Overrides the licence price (the free ffmpeg fallback is 0; 1080p video costs more). */
   price?: number;
+  extra?: Pick<RenderDoc, "gate" | "resolution" | "framing">;
 }): Promise<{ render: RenderDoc; receipt: Awaited<ReturnType<typeof signPayload>> }> {
   const { licence: l0 } = input;
   const sha256 = createHash("sha256").update(input.bytes).digest("hex");
@@ -154,6 +160,7 @@ export async function settle(input: {
     ...(input.rawObject ? { rawObject: input.rawObject } : {}),
     ...(input.previewObject ? { previewObject: input.previewObject } : {}),
     ...(input.aspect ? { aspect: input.aspect } : {}),
+    ...(input.extra ?? {}),
   };
   await db().runTransaction(async (tx) => {
     const lref = db().collection("licences").doc(l0.id);
