@@ -16,9 +16,6 @@ export function SiteFooter() {
           <div className="flex flex-col gap-3 text-[15px] text-grey-dark">
             <span className="text-white">License your face to AI. Your terms, paid per image.</span>
             <span>Prototype on Google Cloud · demo credits · adults only (self-declared)</span>
-            <Link href="/status" className="text-grey-dark underline-offset-2 hover:text-white hover:underline">
-              What this server runs
-            </Link>
           </div>
         </div>
         <div className="flex flex-wrap justify-between gap-4 border-t border-ink-line pt-6 text-[14px] text-grey-dark">
@@ -28,9 +25,6 @@ export function SiteFooter() {
             </Link>
             <Link href="/creators" className="text-grey-dark hover:text-white">
               Creators
-            </Link>
-            <Link href="/status" className="text-grey-dark hover:text-white">
-              Status
             </Link>
             <a href={SOURCE_URL} className="text-grey-dark hover:text-white" target="_blank" rel="noreferrer">
               Source<span className="sr-only"> (opens GitHub)</span>

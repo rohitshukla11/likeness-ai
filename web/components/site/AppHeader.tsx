@@ -13,7 +13,6 @@ const NAV = [
   { href: "/creators", label: "Creators" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/verify", label: "Verify" },
-  { href: "/status", label: "Status" },
 ];
 
 export function AppHeader() {

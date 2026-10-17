@@ -106,9 +106,6 @@ function Hero() {
           <Link href="/creators" className="py-3 text-ink no-underline hover:underline">
             Creators
           </Link>
-          <Link href="/status" className="py-3 text-ink no-underline hover:underline">
-            For AI tools
-          </Link>
           <Link href="/verify" className="py-3 text-ink no-underline hover:underline">
             Verify
           </Link>

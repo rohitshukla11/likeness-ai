@@ -5,7 +5,7 @@
 Creators license their face for AI image and video ads, on their terms. Brands make consented ads in
 minutes. Anyone can check whether an ad was licensed.
 
-- **Live:** https://likeness-1000899129252.us-central1.run.app ([service status](https://likeness-1000899129252.us-central1.run.app/status))
+- **Live:** https://likeness-1000899129252.us-central1.run.app
 - **Built for:** the AI Builder Cup 2026 (Hack2skill × Google Cloud), theme *Media, Content & Digital Experiences*
 - **Runs on:** Google Cloud: Vertex AI (Gemini, Veo 3.1 Lite), Firebase Auth with YouTube, Firestore,
   Cloud KMS, Cloud Storage, Secret Manager, Cloud Run
@@ -242,8 +242,6 @@ free.
   labelled synthetic demo creator.
 - [Verify](https://likeness-1000899129252.us-central1.run.app/verify): upload any file, or open the
   verify link above.
-- [Status](https://likeness-1000899129252.us-central1.run.app/status): a live check of every Google
-  service.
 
 **Signed in:**
 - The Google OAuth consent screen is in *Testing*, so only listed test users can sign in, up to 100 (a
@@ -276,7 +274,8 @@ Full steps: [docs/deploy-gcp.md](docs/deploy-gcp.md).
    cd web && sh scripts/deploy-gcp.sh PROJECT_ID
    ```
    Cloud Build builds the image, which includes the face models and ffmpeg. Cloud Run deploys it. Then
-   add the `*.run.app` domain to Firebase's Authorized domains and open `/status`.
+   add the `*.run.app` domain to Firebase's Authorized domains and check `/api/status` (JSON: every
+   Google service should report ok).
 4. **Local development:**
    ```sh
    gcloud auth application-default login

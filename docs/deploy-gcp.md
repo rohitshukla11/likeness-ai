@@ -43,7 +43,7 @@ It creates the Artifact Registry repository and the two secrets once, builds the
 service `likeness` as `likeness-run` with `--allow-unauthenticated`, 2 vCPU / 2 GiB, 0–3 instances, a 600 s
 request timeout (a video ad can take two Veo calls when the quality gate retries).
 Then add the printed `*.run.app` domain to **Firebase → Authentication → Settings → Authorized domains**,
-and open `/status`: every Google service should show "configured".
+and check `/api/status` (JSON): every Google service should report `ok: true`.
 
 ## Local development
 
