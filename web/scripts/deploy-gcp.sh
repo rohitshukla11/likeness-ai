@@ -1,6 +1,6 @@
 #!/bin/sh
-# Build and deploy Likeness AI to Cloud Run (billed: Cloud Build minutes, Artifact Registry storage,
-# Cloud Run requests). Run from web/:
+# Build and deploy Likeness AI to Cloud Run (billed: Cloud Build minutes beyond the free tier,
+# Artifact Registry storage, Cloud Run requests). Run from web/:
 #
 #   sh scripts/deploy-gcp.sh PROJECT_ID
 #
@@ -25,6 +25,14 @@ echo "Project $PROJECT ($NUMBER), region $REGION, service $SERVICE → $URL"
 # 1. Artifact Registry repository for the image (once).
 $GCLOUD artifacts repositories describe likeness --location="$REGION" --project="$PROJECT" >/dev/null 2>&1 ||
   $GCLOUD artifacts repositories create likeness --repository-format=docker --location="$REGION" --project="$PROJECT" --quiet
+# Keep only the 3 most recent images (Artifact Registry applies cleanup policies about once a day).
+cat > /tmp/likeness-cleanup.json <<'JSON'
+[
+  { "name": "keep-last-3", "action": { "type": "Keep" }, "mostRecentVersions": { "keepCount": 3 } },
+  { "name": "delete-the-rest", "action": { "type": "Delete" }, "condition": { "tagState": "any" } }
+]
+JSON
+$GCLOUD artifacts repositories set-cleanup-policies likeness --location="$REGION" --project="$PROJECT" --policy=/tmp/likeness-cleanup.json --no-dry-run --quiet >/dev/null
 
 # 2. C2PA test certificate in Secret Manager (once), readable only by the service account.
 for pair in "c2pa-cert:../.secrets/c2pa/signer.pem" "c2pa-key:../.secrets/c2pa/signer.key"; do
@@ -48,10 +56,13 @@ steps:
       --build-arg, "NEXT_PUBLIC_APP_URL=${URL}",
       "."]
 images: ["${REPO}/web:${TAG}"]
-options:
-  machineType: E2_HIGHCPU_8
 timeout: 1800s
 YAML
+# The default build machine (e2-standard-2) is in Cloud Build's free tier. Only if a build runs out of
+# memory, run that one build with CLOUD_BUILD_MACHINE=E2_HIGHCPU_8.
+if [ -n "${CLOUD_BUILD_MACHINE:-}" ]; then
+  printf 'options:\n  machineType: %s\n' "$CLOUD_BUILD_MACHINE" >> /tmp/likeness-cloudbuild.yaml
+fi
 $GCLOUD builds submit . --config=/tmp/likeness-cloudbuild.yaml --project="$PROJECT" --quiet
 
 # 4. Deploy to Cloud Run as the least-privilege service account.

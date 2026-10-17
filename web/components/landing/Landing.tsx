@@ -72,7 +72,7 @@ function LoginButton() {
   };
   return (
     <span className="flex flex-col items-end">
-      <button type="button" onClick={login} disabled={busy} className="py-3 text-[14px] font-medium text-ink hover:underline disabled:opacity-60">
+      <button type="button" onClick={login} disabled={busy} className={pillClass("ink", "px-5 text-[14px] disabled:opacity-60")}>
         {busy ? "Signing in…" : "Log in"}
       </button>
       {err && (
