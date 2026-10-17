@@ -5,6 +5,7 @@
 Creators license their face for AI image and video ads, on their terms. Brands make consented ads in
 minutes. Anyone can check whether an ad was licensed.
 
+- **Demo video:** \<DEMO_URL\>
 - **Live:** https://likeness-1000899129252.us-central1.run.app
 - **Built for:** the AI Builder Cup 2026 (Hack2skill × Google Cloud), theme *Media, Content & Digital Experiences*
 - **Runs on:** Google Cloud: Vertex AI (Gemini, Veo 3.1 Lite), Firebase Auth with YouTube, Firestore,
