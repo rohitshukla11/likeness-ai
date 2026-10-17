@@ -1,5 +1,6 @@
 import { balance, ensureUser, getBrand, getUser, setRole } from "@/lib/server/accounts";
 import { getCreator, publicCreator } from "@/lib/server/creators";
+import { forbidDemo } from "@/lib/server/authn";
 import { authed, body } from "@/lib/server/route";
 import type { Role } from "@/lib/model";
 
@@ -18,6 +19,7 @@ export const GET = authed(async (_req, me) => {
 
 export const POST = authed(async (req, me) => {
   const { role } = await body<{ role: Role }>(req);
+  if (role !== "brand") forbidDemo(me, "become a creator");
   await ensureUser(me.uid, me.name, me.email);
   await setRole(me.uid, role);
   return { ok: true, role };

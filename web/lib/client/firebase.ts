@@ -5,7 +5,7 @@
  * server once (POST /api/creator/youtube) and is not kept.
  */
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, reauthenticateWithPopup, signInWithPopup, signOut as fbSignOut, type Auth } from "firebase/auth";
+import { getAuth, GoogleAuthProvider, reauthenticateWithPopup, signInWithCustomToken, signInWithPopup, signOut as fbSignOut, type Auth } from "firebase/auth";
 
 const config = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -29,6 +29,14 @@ export async function signIn() {
 }
 
 export const signOut = () => fbSignOut(auth());
+
+/** "Try as a demo brand": the server starts a temporary brand account and returns its sign-in token. */
+export async function startDemoBrand() {
+  const r = await fetch("/api/demo/session", { method: "POST" });
+  const j = (await r.json().catch(() => ({}))) as { token?: string; error?: string };
+  if (!r.ok || !j.token) throw new Error(j.error ?? `couldn't start a demo brand (HTTP ${r.status})`);
+  await signInWithCustomToken(auth(), j.token);
+}
 
 export const YOUTUBE_SCOPE = "https://www.googleapis.com/auth/youtube.readonly";
 

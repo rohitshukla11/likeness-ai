@@ -17,6 +17,7 @@ import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt, type FilterResult } from "./filter";
 import { firestore } from "./firebase-admin";
+import { demoLimits } from "./demo";
 import { HttpError } from "./http";
 import { labelRender } from "./label";
 import { getLicence } from "./licences";
@@ -89,8 +90,13 @@ export async function preflight(brandUid: string, licenceId: string, type: "imag
   const price = priceOf ? priceOf(l) : type === "video" ? l.pricePerVideo : l.pricePerImage;
   const bal = Number((await db().collection("credits").doc(brandUid).get()).data()?.balance ?? 0);
   if (bal < price) throw new RenderRefused(402, `not enough demo credits: this ${type} costs ${price}, you have ${bal}`);
-  const used = Number((await db().collection("usage").doc(day()).get()).data()?.renders ?? 0);
-  if (used >= rendersPerDay()) throw new RenderRefused(429, `the site's daily render limit (${rendersPerDay()}) is reached; try again after 00:00 UTC`);
+  const usage = (await db().collection("usage").doc(day()).get()).data() ?? {};
+  if (Number(usage.renders ?? 0) >= rendersPerDay()) throw new RenderRefused(429, `the site's daily render limit (${rendersPerDay()}) is reached; try again after 00:00 UTC`);
+  if (l.demoBrand) {
+    const lim = demoLimits();
+    if (Number(usage.demoRenders ?? 0) >= lim.rendersPerDay) throw new RenderRefused(429, `today's demo renders (${lim.rendersPerDay}) are used up; try again after 00:00 UTC, or sign in with Google`);
+    if (type === "video" && Number(usage.demoVideos ?? 0) >= lim.videosPerDay) throw new RenderRefused(429, `today's demo videos (${lim.videosPerDay}) are used up; try again after 00:00 UTC, or sign in with Google`);
+  }
   return { licence: l, price };
 }
 
@@ -187,7 +193,8 @@ export async function settle(input: {
       tx.create(db().collection("ledger").doc(), { uid: l0.creatorId, delta: creatorShare, reason: `${input.type} render by ${l0.brandName} (after ${fee} credit fee)`, renderId: render.id, licenceId: l0.id, at: Date.now() });
       tx.create(db().collection("ledger").doc(), { uid: "platform", delta: fee, reason: `10% fee on render ${render.id}`, renderId: render.id, at: Date.now() });
     }
-    tx.set(uref, { renders: FieldValue.increment(1), ...(input.type === "video" ? { videos: FieldValue.increment(1) } : {}) }, { merge: true });
+    const demo = l0.demoBrand ? { demoRenders: FieldValue.increment(1), ...(input.type === "video" ? { demoVideos: FieldValue.increment(1) } : {}) } : {};
+    tx.set(uref, { renders: FieldValue.increment(1), ...(input.type === "video" ? { videos: FieldValue.increment(1) } : {}), ...demo }, { merge: true });
     tx.create(db().collection("renders").doc(render.id), render);
     tx.create(db().collection("receipts").doc(sha256), { ...receipt, renderId: render.id });
   });

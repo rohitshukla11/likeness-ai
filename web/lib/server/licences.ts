@@ -5,26 +5,42 @@ import { licenceStatus, withVideoDefaults, type LicenceDoc, type RequestDoc } fr
 import { getBrand } from "./accounts";
 import { getCreator } from "./creators";
 import { firestore } from "./firebase-admin";
+import { demoLimits } from "./demo";
 import { HttpError } from "./http";
 
 const db = () => firestore();
 const newId = () => randomBytes(12).toString("base64url");
 
-export async function fileRequest(brandUid: string, input: { creatorId: string; use: string; days: number; maxRenders: number; brief: string }): Promise<RequestDoc> {
+/**
+ * A brand asks a creator for a licence. A synthetic demo creator approves at once (there is no person to
+ * ask, and it says so). A temporary demo brand may only ask demo creators, once, for at most 3 renders.
+ */
+export async function fileRequest(
+  brandUid: string,
+  input: { creatorId: string; use: string; days: number; maxRenders: number; brief: string },
+  opts: { demo?: boolean } = {},
+): Promise<RequestDoc> {
   const brand = await getBrand(brandUid);
   if (!brand) throw new HttpError(409, "set up your brand profile first");
   const c = await getCreator(input.creatorId);
   if (!c || c.status !== "live" || !c.listed || !c.terms) throw new HttpError(404, "this creator isn't accepting licences");
   if (c.uid === brandUid) throw new HttpError(400, "you can't license your own likeness");
+  if (opts.demo) {
+    if (!c.demo) throw new HttpError(403, "A demo brand can license synthetic demo creators only. Sign in with Google to request a real creator.");
+    const [rq, lc] = await Promise.all([db().collection("requests").where("brandId", "==", brandUid).limit(1).get(), db().collection("licences").where("brandId", "==", brandUid).limit(1).get()]);
+    if (!rq.empty || !lc.empty) throw new HttpError(409, "A demo brand gets one licence. Sign in with Google for more.");
+  }
   if (!c.terms.uses.includes(input.use)) throw new HttpError(400, "this creator doesn't allow that use");
   const days = Math.floor(Number(input.days));
   if (!(days >= 1 && days <= c.terms.maxDays)) throw new HttpError(400, `duration must be 1 to ${c.terms.maxDays} days`);
   const maxRenders = Math.floor(Number(input.maxRenders));
-  if (!(maxRenders >= 1 && maxRenders <= c.terms.maxRendersPerLicence)) throw new HttpError(400, `renders must be 1 to ${c.terms.maxRendersPerLicence}`);
+  const cap = opts.demo ? Math.min(demoLimits().rendersPerLicence, c.terms.maxRendersPerLicence) : c.terms.maxRendersPerLicence;
+  if (!(maxRenders >= 1 && maxRenders <= cap)) throw new HttpError(400, `renders must be 1 to ${cap}${opts.demo ? " for a demo brand" : ""}`);
   const brief = String(input.brief ?? "").trim();
   if (brief.length < 10 || brief.length > 600) throw new HttpError(400, "describe the campaign in 10 to 600 characters");
-  const r: RequestDoc = { id: newId(), brandId: brandUid, brandName: brand.name, creatorId: c.uid, use: input.use, days, maxRenders, brief, state: "pending", createdAt: Date.now() };
+  const r: RequestDoc = { id: newId(), brandId: brandUid, brandName: brand.name, creatorId: c.uid, use: input.use, days, maxRenders, brief, state: "pending", createdAt: Date.now(), ...(opts.demo ? { demoBrand: true } : {}) };
   await db().collection("requests").doc(r.id).set(r);
+  if (c.demo) return (await decide(c.uid, r.id, true)).request;
   return r;
 }
 
@@ -59,9 +75,10 @@ export async function decide(creatorUid: string, requestId: string, approve: boo
       pricePerImage: c.terms.pricePerImage,
       pricePerVideo: c.terms.pricePerVideo,
       videoAllowed: c.terms.videoAllowed ?? true,
-      maxVideos: Math.min(c.terms.maxVideosPerLicence ?? 3, r.maxRenders),
+      maxVideos: Math.min(c.terms.maxVideosPerLicence ?? 3, r.maxRenders, r.demoBrand ? demoLimits().videosPerLicence : Infinity),
       videoCount: 0,
       createdAt: now,
+      ...(r.demoBrand ? { demoBrand: true } : {}),
     };
     tx.create(db().collection("licences").doc(licence.id), licence);
     tx.update(ref, { state: "approved", decidedAt: now, licenceId: licence.id });

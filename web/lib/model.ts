@@ -69,6 +69,8 @@ export type RequestDoc = {
   licenceId?: string;
   createdAt: number;
   decidedAt?: number;
+  /** Filed by a temporary demo brand ("Try as a demo brand"). */
+  demoBrand?: boolean;
 };
 
 export type LicenceDoc = {
@@ -90,6 +92,8 @@ export type LicenceDoc = {
   videoCount: number;
   revokedAt?: number;
   createdAt: number;
+  /** Held by a temporary demo brand: smaller caps, counted against the site's demo budget. */
+  demoBrand?: boolean;
 };
 
 export type RenderType = "image" | "video";

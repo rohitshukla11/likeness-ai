@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AppPage, Card, pillClass } from "@/components/ds";
 import { useAuth } from "@/components/auth/AuthProvider";
-import { api, reason, signIn } from "@/lib/client/firebase";
+import { api, reason, signIn, startDemoBrand } from "@/lib/client/firebase";
 
 /** After sign-in: choose to be a creator or a brand (you can do both later). */
 export default function StartPage() {
@@ -31,13 +31,40 @@ export default function StartPage() {
     }
   }
 
+  async function demo() {
+    setBusy(true);
+    setErr(null);
+    try {
+      await startDemoBrand();
+      await refresh();
+      router.push("/dashboard");
+    } catch (e) {
+      setErr(reason(e));
+      setBusy(false);
+    }
+  }
+
   if (!loading && !user)
     return (
-      <AppPage title="Get started" description="Sign in with your Google account to continue.">
-        <button type="button" onClick={() => signIn().catch((e) => setErr(reason(e)))} className={pillClass("lime", "self-start")}>
-          Sign in with Google
-        </button>
-        {err && <p className="m-0 text-bad">{err}</p>}
+      <AppPage title="Get started" description="Sign in with Google, or try the brand side first without an account.">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card title="Sign in with Google">
+            <p className="m-0 text-[15px] text-grey">For creators and brands. Creators connect the YouTube channel on this Google account.</p>
+            <button type="button" disabled={busy} onClick={() => signIn().catch((e) => setErr(reason(e)))} className={pillClass("ink", "mt-2 self-start")}>
+              Sign in with Google
+            </button>
+          </Card>
+          <Card title="Try as a demo brand">
+            <p className="m-0 text-[15px] text-grey">
+              No account needed. A temporary brand with 2,000 demo credits that can license our synthetic demo creators (approved instantly) and make up to 3
+              real AI ads, one of them a video.
+            </p>
+            <button type="button" disabled={busy} onClick={demo} className={pillClass("lime", "mt-2 self-start")}>
+              {busy ? "Starting…" : "Try as a demo brand"}
+            </button>
+          </Card>
+        </div>
+        {err && <p role="alert" className="m-0 text-bad">{err}</p>}
       </AppPage>
     );
 
