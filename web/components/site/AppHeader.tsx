@@ -44,13 +44,9 @@ export function AppHeader() {
             <>
               <span className="hidden text-[14px] text-grey-dark sm:inline">
                 {me?.user.role ? `${me.user.role === "creator" ? "Creator" : "Brand"} · ` : ""}
-                {me?.user.demo ? "Demo brand (trial)" : (user.displayName ?? user.email)}
+                {user.displayName ?? user.email}
               </span>
-              <button type="button" onClick={() => {
-                  // A demo brand has no login to come back with.
-                  if (me?.user.demo && !window.confirm("Signing out ends this demo brand: you can't sign back in to it. Sign out?")) return;
-                  void signOut().then(() => router.push("/"));
-                }} className={pillClass("white", "min-h-10 px-4 text-[14px]")}>
+              <button type="button" onClick={() => signOut().then(() => router.push("/"))} className={pillClass("white", "min-h-10 px-4 text-[14px]")}>
                 Sign out
               </button>
             </>

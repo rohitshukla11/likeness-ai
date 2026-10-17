@@ -70,13 +70,6 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
           </button>
         </Card>
       </div>
-      {me.user.demo && (
-        <p role="note" className="m-0 rounded-[14px] bg-paper p-3 text-[14px]">
-          <b>Demo brand (trial).</b> A temporary account: it can license our synthetic demo creators only (one licence, up to 3 renders, 1 video).
-          The renders are real (Gemini and Veo on Vertex AI), labelled, signed and verifiable; the credits are demo money. Signing out ends this demo
-          brand. <Link href="/creators">Pick a demo creator</Link> to start.
-        </p>
-      )}
       {msg && <p role="status" className="m-0 text-[15px] text-wait">{msg}</p>}
 
       <Card title="Licences" action={<Link href="/creators" className={pillClass("outline", "min-h-10 px-4")}>Find a creator</Link>}>

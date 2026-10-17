@@ -29,13 +29,10 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
   const [renders, setRenders] = useState(3);
   const [brief, setBrief] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
-  const [ok, setOk] = useState<"pending" | "approved" | null>(null);
+  const [ok, setOk] = useState(false);
   if (error) return <AppPage title="Creator">{error}</AppPage>;
   if (!c) return <AppPage title="Creator">Loading…</AppPage>;
   const t = c.terms;
-  const demoBrand = !!me?.user.demo;
-  // A demo brand may ask for at most 3 renders (lib/server/demo.ts).
-  const maxRenders = t ? (demoBrand ? Math.min(3, t.maxRendersPerLicence) : t.maxRendersPerLicence) : 0;
   return (
     <AppPage title={c.displayName} description={c.demo ? "Synthetic demo creator: a generated face, not a real person." : `Verified creator account: YouTube, ${subscriberLabel(c.channel?.subscriberCount ?? null)}`}>
       <div className="grid gap-4 md:grid-cols-[320px_1fr]">
@@ -53,21 +50,12 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
         <Card title="Request a licence">
           {t && (
             <p className="m-0 text-[15px]">
-              {credits(t.pricePerImage)} per image · {credits(t.pricePerVideo)} per video · up to {maxRenders} renders · up to {t.maxDays} days.{" "}
-              {c.demo ? "A synthetic demo creator: requests are approved automatically." : "The creator approves every request."}
+              {credits(t.pricePerImage)} per image · {credits(t.pricePerVideo)} per video · up to {t.maxRendersPerLicence} renders · up to {t.maxDays} days. The creator approves every request.
             </p>
           )}
           {me?.user.role !== "brand" ? (
             <p className="m-0 text-grey">
-              <Link href="/start">Sign in as a brand, or try as a demo brand</Link>, to request a licence.
-            </p>
-          ) : demoBrand && !c.demo ? (
-            <p className="m-0 text-grey">
-              A demo brand can license synthetic demo creators only. <Link href="/creators">Pick a demo creator</Link>, or sign in with Google to request {c.displayName}.
-            </p>
-          ) : ok === "approved" ? (
-            <p className="m-0 text-ok">
-              Approved automatically. Your licence is on your <Link href="/dashboard">dashboard</Link>: make your first ad there.
+              <Link href="/start">Sign in as a brand</Link> to request a licence.
             </p>
           ) : ok ? (
             <p className="m-0 text-ok">
@@ -89,8 +77,8 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
                     <input type="number" min={1} max={t.maxDays} value={days} onChange={(e) => setDays(Number(e.target.value))} className={inputClass} />
                   </label>
                   <label className="flex flex-col gap-1 text-[14px]">
-                    <span className="text-grey">Renders (max {maxRenders})</span>
-                    <input type="number" min={1} max={maxRenders} value={renders} onChange={(e) => setRenders(Number(e.target.value))} className={inputClass} />
+                    <span className="text-grey">Renders (max {t.maxRendersPerLicence})</span>
+                    <input type="number" min={1} max={t.maxRendersPerLicence} value={renders} onChange={(e) => setRenders(Number(e.target.value))} className={inputClass} />
                   </label>
                 </div>
                 <label className="flex flex-col gap-1 text-[14px]">
@@ -101,8 +89,8 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
                   type="button"
                   disabled={!use_ || brief.trim().length < 10}
                   onClick={() =>
-                    api<{ request: { state: string } }>("/api/requests", { method: "POST", body: JSON.stringify({ creatorId: c.uid, use: use_, days, maxRenders: Math.min(renders, maxRenders), brief }) })
-                      .then((r) => setOk(r.request.state === "approved" ? "approved" : "pending"))
+                    api("/api/requests", { method: "POST", body: JSON.stringify({ creatorId: c.uid, use: use_, days, maxRenders: renders, brief }) })
+                      .then(() => setOk(true))
                       .catch((e) => setMsg(reason(e)))
                   }
                   className={pillClass("lime", "self-start")}

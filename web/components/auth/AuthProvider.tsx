@@ -6,8 +6,7 @@ import { api, auth, firebaseConfigured } from "@/lib/client/firebase";
 import type { Channel, Role, Terms } from "@/lib/model";
 
 export type Me = {
-  /** demo: a temporary demo brand ("Try as a demo brand"). */
-  user: { uid: string; role: Role | null; name: string | null; email: string | null; demo?: boolean };
+  user: { uid: string; role: Role | null; name: string | null; email: string | null };
   creator: {
     uid: string;
     displayName: string;

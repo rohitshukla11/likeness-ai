@@ -18,12 +18,8 @@ Vertex AI's global endpoint. No API keys: the Cloud Run service account calls Go
    `roles/cloudkms.cryptoKeyEncrypterDecrypter` on `photos` only; `roles/cloudkms.signerVerifier` on
    `receipts` only; `roles/iam.serviceAccountTokenCreator` on itself (V4 signed URLs). It is the only
    identity that can open a creator's photos.
-6. Demo-brand signer: service account `likeness-demo-signer` with **no project roles**. Grant
-   `roles/iam.serviceAccountTokenCreator` on it to `likeness-run` (and, for local development, to your
-   own account). It only signs the Firebase custom tokens for "Try as a demo brand", so the account
-   that can open creators' photos is never needed for that.
-7. Firebase: add Firebase to the project, enable Google sign-in, register a web app and copy its config.
-8. OAuth consent screen: External, **Testing**, test users added, scopes `openid email profile
+6. Firebase: add Firebase to the project, enable Google sign-in, register a web app and copy its config.
+7. OAuth consent screen: External, **Testing**, test users added, scopes `openid email profile
    youtube.readonly`. In Testing, up to 100 test users; their authorizations expire after 7 days.
 
 ## Configuration
