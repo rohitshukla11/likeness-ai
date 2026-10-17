@@ -8,7 +8,10 @@
  */
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/components/auth/AuthProvider";
+import { reason, signIn } from "@/lib/client/firebase";
 import { pillClass } from "@/components/ds";
 import { IconArrowLeft, IconArrowRight, IconChevron } from "@/components/ds/icons";
 import { useCountUp, useInView } from "@/components/ds/motion";
@@ -47,6 +50,40 @@ function Ribbon({ words, dir, className, style }: { words: string[]; dir: "l" | 
   );
 }
 
+/** "Log in" opens Google's sign-in popup right here; once signed in, /start sends each person to their place. */
+function LoginButton() {
+  const { user } = useAuth();
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const login = async () => {
+    if (user) return router.push("/start");
+    setBusy(true);
+    setErr(null);
+    try {
+      await signIn();
+      router.push("/start");
+    } catch (e) {
+      // Closing the popup is not an error.
+      if (!/popup-closed-by-user|cancelled-popup-request/.test(String((e as { code?: string }).code))) setErr(reason(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="flex flex-col items-end">
+      <button type="button" onClick={login} disabled={busy} className="py-3 text-[14px] font-medium text-ink hover:underline disabled:opacity-60">
+        {busy ? "Signing in…" : "Log in"}
+      </button>
+      {err && (
+        <span role="alert" className="max-w-[260px] text-right text-[12px] text-bad">
+          {err}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function Hero() {
   return (
     <section className="relative overflow-hidden bg-[linear-gradient(160deg,#D4F06A_0%,#E4F7A0_38%,#F2FAD6_100%)]">
@@ -77,15 +114,7 @@ function Hero() {
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-4">
-          <Link href="/dashboard" className="hidden py-3 text-[14px] font-medium text-ink no-underline hover:underline sm:inline">
-            Log in
-          </Link>
-          <Link href="/start" className={pillClass("outline-dark", "hidden px-5 text-[14px] sm:inline-flex")}>
-            License a face
-          </Link>
-          <Link href="/start" className={pillClass("ink", "px-5 text-[14px]")}>
-            Become a creator
-          </Link>
+          <LoginButton />
         </div>
       </header>
 
