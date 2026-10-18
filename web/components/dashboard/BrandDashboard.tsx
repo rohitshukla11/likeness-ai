@@ -5,7 +5,7 @@ import { Card, StatCard, pillClass } from "@/components/ds";
 import { StatusBadge, inputClass } from "@/components/ui";
 import type { Me } from "@/components/auth/AuthProvider";
 import { api, reason } from "@/lib/client/firebase";
-import { credits, DEMO_TOPUP, useLabel } from "@/lib/model";
+import { AUTO_APPROVED_LABEL, credits, DEMO_TOPUP, useLabel } from "@/lib/model";
 import { CreativeAssistant } from "./CreativeAssistant";
 import { RenderCard } from "./RenderCard";
 import { useApi, when, type LicenceRow, type Lists, type Render } from "./shared";
@@ -61,12 +61,12 @@ export function BrandDashboard({ me, refresh }: { me: Me; refresh: () => Promise
             type="button"
             onClick={() =>
               api("/api/credits/topup", { method: "POST" })
-                .then(() => (setMsg(`Added ${DEMO_TOPUP} demo credits.`), refresh()))
+                .then(() => (setMsg(`Added ${DEMO_TOPUP.toLocaleString("en-US")} demo credits.`), refresh()))
                 .catch((e) => setMsg(reason(e)))
             }
             className={pillClass("ink", "self-start")}
           >
-            Top up {DEMO_TOPUP} demo credits
+            Top up {DEMO_TOPUP.toLocaleString("en-US")} demo credits (once)
           </button>
         </Card>
       </div>
@@ -148,6 +148,7 @@ function LicenceCard({ l, stills, videoFrom, onRendered }: { l: LicenceRow; stil
       <span className="flex flex-wrap items-center gap-3">
         <StatusBadge status={l.status} />
         <b>{l.creatorName}</b>
+        {l.autoApproved && <span className="rounded-full bg-wait-bg px-2.5 py-0.5 text-[12px] font-semibold text-wait">{AUTO_APPROVED_LABEL}</span>}
         <span className="text-grey">
           {useLabel(l.use)} · {l.renderCount}/{l.maxRenders} renders · {l.videoAllowed ? `${l.videoCount ?? 0}/${l.maxVideos} videos` : "no video"} · image {l.pricePerImage} · video {l.pricePerVideo} credits · until {when(l.end)}
         </span>

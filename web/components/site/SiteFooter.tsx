@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PRIVACY_URL, TERMS_URL } from "@/lib/site-content";
 
 export const SOURCE_URL = "https://github.com/rohitshukla11/likeness-ai";
 
@@ -26,6 +27,12 @@ export function SiteFooter() {
             <Link href="/creators" className="text-grey-dark hover:text-white">
               Creators
             </Link>
+            <a href={PRIVACY_URL} className="text-grey-dark hover:text-white">
+              Privacy
+            </a>
+            <a href={TERMS_URL} className="text-grey-dark hover:text-white">
+              Terms
+            </a>
             <a href={SOURCE_URL} className="text-grey-dark hover:text-white" target="_blank" rel="noreferrer">
               Source<span className="sr-only"> (opens GitHub)</span>
             </a>

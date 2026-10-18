@@ -14,7 +14,7 @@ describe("video caps", () => {
     expect(videoRefusal({ ...l, videoCount: 3 }, 0, 10)).toMatch(/video limit \(3\) is used up/);
   });
   it("refuses at the site's daily cap", () => {
-    expect(videoRefusal(l, 10, 10)).toMatch(/daily video limit \(10\)/);
+    expect(videoRefusal(l, 10, 10)).toMatch(/today.s 10 video ads across all brands/);
   });
 });
 

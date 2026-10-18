@@ -6,7 +6,7 @@ import { inputClass } from "@/components/ui";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useApi } from "@/components/dashboard/shared";
 import { api, reason } from "@/lib/client/firebase";
-import { credits, subscriberLabel, useLabel, type Terms } from "@/lib/model";
+import { AUTO_APPROVED_LABEL, credits, subscriberLabel, useLabel, type Terms } from "@/lib/model";
 
 type C = {
   uid: string;
@@ -29,7 +29,7 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
   const [renders, setRenders] = useState(3);
   const [brief, setBrief] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
-  const [ok, setOk] = useState(false);
+  const [ok, setOk] = useState<"pending" | "approved" | null>(null);
   if (error) return <AppPage title="Creator">{error}</AppPage>;
   if (!c) return <AppPage title="Creator">Loading…</AppPage>;
   const t = c.terms;
@@ -50,12 +50,17 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
         <Card title="Request a licence">
           {t && (
             <p className="m-0 text-[15px]">
-              {credits(t.pricePerImage)} per image · {credits(t.pricePerVideo)} per video · up to {t.maxRendersPerLicence} renders · up to {t.maxDays} days. The creator approves every request.
+              {credits(t.pricePerImage)} per image · {credits(t.pricePerVideo)} per video · up to {t.maxRendersPerLicence} renders · up to {t.maxDays} days.{" "}
+              {c.demo ? `Requests are ${AUTO_APPROVED_LABEL}.` : "The creator approves every request."}
             </p>
           )}
           {me?.user.role !== "brand" ? (
             <p className="m-0 text-grey">
               <Link href="/start">Sign in as a brand</Link> to request a licence.
+            </p>
+          ) : ok === "approved" ? (
+            <p className="m-0 text-ok">
+              Approved: {AUTO_APPROVED_LABEL}. Your licence is on your <Link href="/dashboard">dashboard</Link>; make your first ad there.
             </p>
           ) : ok ? (
             <p className="m-0 text-ok">
@@ -89,8 +94,8 @@ export default function CreatorPage({ params }: { params: Promise<{ id: string }
                   type="button"
                   disabled={!use_ || brief.trim().length < 10}
                   onClick={() =>
-                    api("/api/requests", { method: "POST", body: JSON.stringify({ creatorId: c.uid, use: use_, days, maxRenders: renders, brief }) })
-                      .then(() => setOk(true))
+                    api<{ request: { state: string } }>("/api/requests", { method: "POST", body: JSON.stringify({ creatorId: c.uid, use: use_, days, maxRenders: renders, brief }) })
+                      .then((r) => setOk(r.request.state === "approved" ? "approved" : "pending"))
                       .catch((e) => setMsg(reason(e)))
                   }
                   className={pillClass("lime", "self-start")}

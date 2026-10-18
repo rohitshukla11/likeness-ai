@@ -16,4 +16,11 @@ export type Testimonial = { quote: string; name: string; role: string };
 /** Real, attributed quotes only. Leave empty until there are some: the section is then not rendered. */
 export const TESTIMONIALS: Testimonial[] = [];
 
+/** The legal pages, on Firebase Hosting (hosting/ in the repo). */
+export const LEGAL_SITE = "https://bionic-carving-140911.firebaseapp.com";
+export const PRIVACY_URL = `${LEGAL_SITE}/privacy`;
+export const TERMS_URL = `${LEGAL_SITE}/terms`;
+
+export const EVALUATOR_HINT = "Log in → choose Brand → top up demo credits → license Maya Okafor (auto-approved) → make an image and video ad.";
+
 export const BUILT_ON = ["Vertex AI Gemini", "Veo", "Firebase", "YouTube", "Cloud KMS", "Cloud Run", "C2PA"];

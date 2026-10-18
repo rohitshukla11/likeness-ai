@@ -1,7 +1,7 @@
 import "server-only";
 /** Licence requests, the creator's decision, licences and revocation. */
 import { randomBytes } from "node:crypto";
-import { licenceStatus, withVideoDefaults, type LicenceDoc, type RequestDoc } from "@/lib/model";
+import { autoApproves, licenceStatus, withVideoDefaults, type LicenceDoc, type RequestDoc } from "@/lib/model";
 import { getBrand } from "./accounts";
 import { getCreator } from "./creators";
 import { firestore } from "./firebase-admin";
@@ -25,10 +25,12 @@ export async function fileRequest(brandUid: string, input: { creatorId: string; 
   if (brief.length < 10 || brief.length > 600) throw new HttpError(400, "describe the campaign in 10 to 600 characters");
   const r: RequestDoc = { id: newId(), brandId: brandUid, brandName: brand.name, creatorId: c.uid, use: input.use, days, maxRenders, brief, state: "pending", createdAt: Date.now() };
   await db().collection("requests").doc(r.id).set(r);
+  // A synthetic demo creator approves at once; the terms were checked above, like any request.
+  if (autoApproves(c)) return (await decide(c.uid, r.id, true, { auto: true })).request;
   return r;
 }
 
-export async function decide(creatorUid: string, requestId: string, approve: boolean): Promise<{ request: RequestDoc; licence?: LicenceDoc }> {
+export async function decide(creatorUid: string, requestId: string, approve: boolean, opts: { auto?: boolean } = {}): Promise<{ request: RequestDoc; licence?: LicenceDoc }> {
   return db().runTransaction(async (tx) => {
     const ref = db().collection("requests").doc(requestId);
     const s = await tx.get(ref);
@@ -62,10 +64,11 @@ export async function decide(creatorUid: string, requestId: string, approve: boo
       maxVideos: Math.min(c.terms.maxVideosPerLicence ?? 3, r.maxRenders),
       videoCount: 0,
       createdAt: now,
+      ...(opts.auto ? { autoApproved: true } : {}),
     };
     tx.create(db().collection("licences").doc(licence.id), licence);
-    tx.update(ref, { state: "approved", decidedAt: now, licenceId: licence.id });
-    return { request: { ...r, state: "approved" as const, licenceId: licence.id }, licence };
+    tx.update(ref, { state: "approved", decidedAt: now, licenceId: licence.id, ...(opts.auto ? { autoApproved: true } : {}) });
+    return { request: { ...r, state: "approved" as const, licenceId: licence.id, ...(opts.auto ? { autoApproved: true } : {}) }, licence };
   });
 }
 

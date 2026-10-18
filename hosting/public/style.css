@@ -1,0 +1,61 @@
+/* Likeness AI legal pages: the app's ink, lime and violet. System fonts only: nothing is loaded from elsewhere. */
+:root {
+  --ink: #121316;
+  --ink-line: #26282d;
+  --paper: #f1f3ee;
+  --card: #ffffff;
+  --grey: #5f636b;
+  --grey-dark: #b9bcc4;
+  --lime: #dcf37b;
+  --violet: #8b5cf6;
+  --violet-deep: #6d3fe0;
+  --violet-soft: #ede5ff;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+a { color: var(--violet-deep); text-underline-offset: 2px; }
+a:focus-visible, .button:focus-visible { outline: 3px solid var(--violet); outline-offset: 3px; }
+header.bar { background: var(--ink); color: #fff; }
+header.bar .wrap { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 18px; padding-bottom: 18px; }
+.brand { color: #fff; font-weight: 900; letter-spacing: 0.04em; text-decoration: none; font-size: 18px; }
+header.bar nav { display: flex; gap: 20px; font-size: 15px; }
+header.bar nav a { color: var(--grey-dark); text-decoration: none; }
+header.bar nav a:hover, header.bar nav a[aria-current="page"] { color: var(--lime); }
+.wrap { max-width: 860px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+main.doc { padding: 32px 0 56px; }
+main.doc .card { background: var(--card); border-radius: 20px; padding: clamp(20px, 4vw, 40px); }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 20px; margin: 32px 0 8px; }
+h3 { font-size: 16px; margin: 20px 0 4px; }
+p, li { color: #2b2d33; }
+ul { padding-left: 22px; }
+li { margin: 4px 0; }
+.updated { color: var(--grey); font-size: 14px; margin: 0 0 20px; }
+.note { background: var(--violet-soft); border-left: 4px solid var(--violet); border-radius: 12px; padding: 12px 16px; margin: 20px 0; }
+.note p { margin: 0; }
+.hero { background: var(--ink); color: #fff; min-height: 72vh; display: flex; align-items: center; }
+.hero .wrap { padding-top: 64px; padding-bottom: 64px; }
+.hero h1 { color: #fff; font-size: clamp(36px, 8vw, 72px); font-weight: 900; letter-spacing: -0.02em; margin-bottom: 12px; }
+.hero h1 span { color: var(--lime); }
+.tagline { font-size: clamp(18px, 3vw, 24px); color: var(--grey-dark); margin: 0 0 28px; }
+.tagline b { color: #fff; }
+.button {
+  display: inline-block; background: var(--lime); color: var(--ink); font-weight: 700; text-decoration: none;
+  border-radius: 999px; padding: 14px 26px; font-size: 17px;
+}
+.button:hover { background: #c9e35f; }
+.hero .links { margin-top: 28px; display: flex; gap: 22px; flex-wrap: wrap; }
+.hero .links a { color: var(--grey-dark); }
+.hero .links a:hover { color: var(--lime); }
+.pill { display: inline-block; background: var(--violet-deep); color: #fff; border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+footer.foot { background: var(--ink); color: var(--grey-dark); font-size: 14px; }
+footer.foot .wrap { display: flex; flex-wrap: wrap; gap: 18px; justify-content: space-between; padding-top: 24px; padding-bottom: 24px; }
+footer.foot a { color: var(--grey-dark); }
+footer.foot a:hover { color: #fff; }
+body.dark { background: var(--ink); }

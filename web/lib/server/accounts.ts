@@ -1,6 +1,6 @@
 import "server-only";
 /** Roles, brand profiles and the demo-credit ledger. Credits are demo money, labelled so everywhere. */
-import { DEMO_TOPUP, DEMO_TOPUP_CAP, type Role } from "@/lib/model";
+import { DEMO_TOPUP, type Role } from "@/lib/model";
 import { firestore } from "./firebase-admin";
 import { HttpError } from "./http";
 
@@ -50,11 +50,13 @@ export async function balance(uid: string): Promise<number> {
   return s.exists ? Number(s.data()!.balance ?? 0) : 0;
 }
 
+/** One demo top-up per account (2,000 demo credits), so a public prototype can't be drained. */
 export async function topUp(uid: string): Promise<number> {
   return db().runTransaction(async (tx) => {
     const ref = db().collection("credits").doc(uid);
+    const done = await tx.get(db().collection("ledger").where("uid", "==", uid).where("reason", "==", "demo top-up").limit(1));
+    if (!done.empty) throw new HttpError(409, `You've already had your one demo top-up of ${DEMO_TOPUP.toLocaleString("en-US")} credits. That's enough for a couple of image ads and a video ad.`);
     const cur = Number((await tx.get(ref)).data()?.balance ?? 0);
-    if (cur + DEMO_TOPUP > DEMO_TOPUP_CAP) throw new HttpError(409, `demo credits are capped at ${DEMO_TOPUP_CAP.toLocaleString("en-US")}`);
     tx.set(ref, { uid, balance: cur + DEMO_TOPUP, updatedAt: Date.now() }, { merge: true });
     tx.create(db().collection("ledger").doc(), { uid, delta: DEMO_TOPUP, reason: "demo top-up", at: Date.now() });
     return cur + DEMO_TOPUP;

@@ -51,3 +51,17 @@ pnpm dev
 pnpm seed:demo "Name" "appearance"     # a synthetic demo creator (generated face, labelled)
 pnpm e2e:smoke demo-<name>             # one paid image render end to end (about $0.03 of Gemini)
 ```
+
+## Legal pages (Firebase Hosting)
+
+The home, privacy and terms pages are static files in `hosting/public/`, served by Firebase Hosting at
+`https://PROJECT.firebaseapp.com` (`firebase.json` is Hosting-only: no rewrites to Cloud Run). From the
+repository root:
+
+```sh
+npx firebase-tools login
+npx firebase-tools deploy --only hosting --project PROJECT_ID
+```
+
+Hosting reserves `/__/` on this domain for Firebase Auth's sign-in handler; the pages' security headers
+apply only to the pages themselves, so Google sign-in keeps working.

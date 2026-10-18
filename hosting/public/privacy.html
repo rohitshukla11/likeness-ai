@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy · Likeness AI</title>
+<meta name="description" content="What Likeness AI collects, how it is used and protected, who processes it, and how to have it deleted.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="bar"><div class="wrap"><a class="brand" href="/">LIKENESS AI</a><nav><a href="/privacy" aria-current="page">Privacy</a><a href="/terms">Terms</a><a href="https://likeness-1000899129252.us-central1.run.app">Open the app</a></nav></div></header>
+<main class="doc"><div class="wrap"><div class="card">
+<h1>Privacy policy</h1>
+<p class="updated">Last updated 18 October 2026</p>
+
+<div class="note"><p><b>Status:</b> Likeness AI is a hackathon prototype built for the AI Builder Cup 2026. It uses demo credits only (no real payments), creators self-declare that they are 18 or older, and it may be changed or shut down at any time.</p></div>
+
+<p>Likeness AI (“we”) lets creators license their likeness for AI-generated image and video ads, lets brands request licences and make those ads, and lets anyone check whether a file was licensed. This policy covers the app at <a href="https://likeness-1000899129252.us-central1.run.app">likeness-1000899129252.us-central1.run.app</a> and this site. Contact: <a href="mailto:rohitshukla556@gmail.com">rohitshukla556@gmail.com</a>.</p>
+
+<h2>What we collect</h2>
+<h3>Google account basics (everyone who signs in)</h3>
+<p>When you sign in with Google (through Firebase Authentication) we receive your Google account ID, name, email address and profile picture URL. We store your role (creator or brand) and, for brands, the brand name and website you enter.</p>
+
+<h3>YouTube channel details (creators only, when you choose to connect)</h3>
+<p>To show that a channel is yours, we ask Google for read-only YouTube access (<code>youtube.readonly</code>) at the moment you click “Connect YouTube”. With it we make one request for your own channel and keep its <b>channel ID, title, avatar image URL and subscriber count</b> (if public). The access token is sent to our server once for that request and is <b>not stored</b>. The avatar image is downloaded and checked in memory to confirm it shows a face and to compare it with your live face check; it is not stored.</p>
+
+<h3>Live face frames (creators only)</h3>
+<p>The face check runs in your browser with your camera (look, blink, turn slightly each way) and captures three frames; you never upload a file. Our server compares them with your channel avatar and records the match score and the liveness result. When you go live, the three frames are <b>encrypted with AES-256-GCM under a data key unique to you, which is itself encrypted (“wrapped”) by a Google Cloud KMS key</b>, and stored in a private Cloud Storage bucket, with a hash of each frame. Face comparisons happen in memory; we do not store face embeddings. We also make a 512-pixel public profile photo from the first frame, labelled “not licensed for reuse”.</p>
+<p>Your frames are opened only for a render (or the video quality check) under a licence you approved. Each opening is logged, and you can see that log on your dashboard; Cloud KMS also records each decryption in Google Cloud’s audit logs.</p>
+
+<h3>Licences, renders and receipts</h3>
+<p>We store licence requests and licences (who, which use, period, prices and caps), the prompts brands write, the images and videos generated, a signed receipt for each file (its SHA-256 hash, licence, model and price, signed with a Cloud KMS key), a content credential (C2PA) embedded in each file, and a ledger of demo credits. You also confirm consent and your 18+ self-declaration, which we record with the time.</p>
+
+<h3>Technical logs</h3>
+<p>Google Cloud keeps standard request logs for the app (such as IP address, user agent and time), by default for 30 days. We use no analytics, no advertising and no tracking cookies. This site sets no cookies; the app keeps your Firebase sign-in session in your browser’s storage.</p>
+
+<h2>How we use it</h2>
+<ul>
+<li>To sign you in and show the right dashboard.</li>
+<li>To verify creators: YouTube channel ownership and a live face matched to the channel avatar.</li>
+<li>To run licensing: requests, approvals (synthetic demo creators approve automatically), revocation, caps and demo-credit payments.</li>
+<li>To generate the ads a brand requests under an approved licence, label them, sign their receipts and let anyone verify them.</li>
+<li>To keep the prototype safe and affordable: a safety filter on every prompt and daily limits on renders.</li>
+</ul>
+<p>We do not sell personal data, show ads, or use your data for anything unrelated to these purposes.</p>
+
+<h2>Who processes it</h2>
+<p>All processing runs on Google services acting on our behalf:</p>
+<ul>
+<li><b>Google Cloud:</b> Cloud Run (the app), Firestore (records), Cloud Storage (encrypted frames and files), Cloud KMS (encryption and receipt signing), Secret Manager and Cloud Logging, in the United States (us-central1, and Google’s global endpoint for Gemini).</li>
+<li><b>Firebase Authentication</b> for Google sign-in.</li>
+<li><b>Vertex AI:</b> Gemini image and text models and Veo. To make an ad, the creator’s three reference frames and the brand’s prompt are sent to Gemini; to make a video, the licensed still and the motion prompt are sent to Veo; prompts are checked by a Gemini text model. Google states that it does not use Vertex AI customer data to train its models without permission.</li>
+<li><b>YouTube API Services</b>, for the channel check described above.</li>
+</ul>
+
+<h2>What is public</h2>
+<p>A live creator’s display name, channel title, subscriber count, labelled profile photo and licence terms are shown on the Creators page. Anyone who checks a file on Verify sees whether it was licensed, the creator’s name, the licensee and the licence’s status. Brands see the licences they hold and the ads they made; creators see every ad made with their likeness.</p>
+
+<h2>Google API Services User Data Policy (Limited Use)</h2>
+<p>Likeness AI’s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements. YouTube data is used only to confirm that you own the channel you connect and to show its title and audience size on your creator profile; it is not used for advertising, not sold, not transferred to others except as needed to run this feature or as required by law, and not read by people except with your consent, for security, or as required by law.</p>
+<p>By connecting YouTube you also agree to the <a href="https://www.youtube.com/t/terms">YouTube Terms of Service</a>; Google’s handling of your data is described in the <a href="https://policies.google.com/privacy">Google Privacy Policy</a>. You can remove Likeness AI’s access to your Google account at any time at <a href="https://myaccount.google.com/connections">myaccount.google.com/connections</a>.</p>
+
+<h2>Retention and deletion</h2>
+<p>We keep your data while your account exists or until the prototype is shut down. To delete your data, email <a href="mailto:rohitshukla556@gmail.com">rohitshukla556@gmail.com</a> from your account’s address. For a creator we delete the creator profile, YouTube channel details, encrypted face frames, the wrapped key and the public photo, and revoke your licences. So that files already made keep verifying honestly (as “Revoked”), we keep their signed receipts and the licence records, unlinked from your account. We aim to act within 30 days. Logs expire on Google Cloud’s schedule.</p>
+
+<h2>Children</h2>
+<p>Likeness AI is for adults. Do not use it if you are under 18.</p>
+
+<h2>Changes and contact</h2>
+<p>We will update this page if our practices change. Questions or requests: <a href="mailto:rohitshukla556@gmail.com">rohitshukla556@gmail.com</a>.</p>
+</div></div></main>
+<footer class="foot"><div class="wrap"><span>© 2026 Likeness AI · a hackathon prototype</span><span><a href="/">Home</a> · <a href="/terms">Terms</a></span></div></footer>
+</body>
+</html>

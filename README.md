@@ -1,12 +1,16 @@
 # Likeness AI
 
-**Your face. Your terms. Verified by your channel.**
+**Your face. Your terms. Get paid per ad.**
 
 Creators license their face for AI image and video ads, on their terms. Brands make consented ads in
 minutes. Anyone can check whether an ad was licensed.
 
-- **Demo video:** \<DEMO_URL\>
+- **Demo video:** https://youtu.be/XT3-EJ2odck
 - **Live:** https://likeness-1000899129252.us-central1.run.app
+- **Evaluators:** Log in → choose Brand → top up demo credits → license Maya Okafor (auto-approved) →
+  make an image and video ad.
+- **Privacy and terms:** [privacy policy](https://bionic-carving-140911.firebaseapp.com/privacy) ·
+  [terms of service](https://bionic-carving-140911.firebaseapp.com/terms)
 - **Built for:** the AI Builder Cup 2026 (Hack2skill × Google Cloud), theme *Media, Content & Digital Experiences*
 - **Runs on:** Google Cloud: Vertex AI (Gemini, Veo 3.1 Lite), Firebase Auth with YouTube, Firestore,
   Cloud KMS, Cloud Storage, Secret Manager, Cloud Run
@@ -220,8 +224,10 @@ Google Cloud costs to us (list prices, us-central1):
 | Creative assistant draft, safety filter check (Gemini Flash-Lite) | well under $0.001 each |
 | Cloud KMS (unwrap, sign) | well under $0.001 per render |
 
-Cloud Run scales to zero (2 vCPU, 2 GiB, up to 3 instances). The site caps renders and videos per UTC
-day (`RENDERS_PER_DAY`, `VIDEOS_PER_DAY`) to bound spend.
+Cloud Run runs 2 vCPU, 2 GiB, up to 3 instances. Spend is bounded by daily caps: 40 ads and 10 videos
+site-wide (`RENDERS_PER_DAY`, `VIDEOS_PER_DAY`), 3 ads and 1 video per brand (`BRAND_RENDERS_PER_DAY`,
+`BRAND_VIDEOS_PER_DAY`), and one demo top-up per brand. At most that is about 30 images and 10 videos a
+day, roughly $5 of Vertex AI even if every video needs its quality-gate retry.
 
 What brands pay creators (demo credits, suggested from audience size; creators can change them):
 
@@ -239,21 +245,26 @@ free.
 ## Try it
 
 **Without signing in:**
-- [Creators](https://likeness-1000899129252.us-central1.run.app/creators): a real creator and a
-  labelled synthetic demo creator.
+- [Creators](https://likeness-1000899129252.us-central1.run.app/creators): the listed creators,
+  including Maya Okafor, a labelled synthetic demo creator.
 - [Verify](https://likeness-1000899129252.us-central1.run.app/verify): upload any file, or open the
   verify link above.
 
 **Signed in:**
-- The Google OAuth consent screen is in *Testing*, so only listed test users can sign in, up to 100 (a
-  Google limit until the app is verified). Ask us to add your Google account.
-- **Creator path:** Get started → Creator → connect YouTube → live face check → go live → approve a
-  brand's request.
-- **Brand path:** Get started → Brand → top up demo credits → request a licence → ✨ Write it for me →
-  image ad → video ad → Verify → (creator revokes) → the next render is refused.
+- Sign in with any Google account.
+- **Evaluators (brand path):** Log in → choose Brand → top up demo credits → license Maya Okafor
+  (auto-approved) → ✨ Write it for me → make an image ad and a video ad → Verify.
+- **Creator path:** Log in → choose Creator → connect YouTube → live face check → go live → approve a
+  brand's request. Connecting YouTube may show Google's "unverified app" screen until Google completes
+  its review of the app's read-only YouTube access.
 
 The demo creator (Maya Okafor) is a synthetic face generated with Gemini. It is labelled as such
-everywhere and has no YouTube channel.
+everywhere, has no YouTube channel, and approves licence requests automatically within its terms
+(shown as "auto-approved (synthetic demo creator)"). Real creators approve every request themselves.
+
+While the app is open to the public, each brand gets one demo top-up (2,000 credits) and can make up to
+3 ads a day, 1 of them a video; the whole site makes up to 40 ads and 10 videos a day. When a limit is
+reached, the app says so and when to come back.
 
 ## Setup and deploy
 

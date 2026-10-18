@@ -12,7 +12,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { CATEGORIES } from "@/lib/categories";
 import sharp from "sharp";
-import { creatorFee, licenceStatus, videoRefusal, withVideoDefaults, type LicenceDoc, type ReceiptPayload, type VideoResolution } from "@/lib/model";
+import { capRefusal, creatorFee, licenceStatus, videoRefusal, withVideoDefaults, type DailyCaps, type DailyUsage, type LicenceDoc, type ReceiptPayload, type VideoResolution } from "@/lib/model";
 import { embedManifest } from "./c2pa";
 import { getCreator } from "./creators";
 import { checkPrompt, type FilterResult } from "./filter";
@@ -29,6 +29,18 @@ import type { GateRecord } from "./gate";
 const db = () => firestore();
 export const rendersPerDay = () => Number(process.env.RENDERS_PER_DAY ?? 40);
 export const videosPerDay = () => Number(process.env.VIDEOS_PER_DAY ?? 10);
+export const dailyCaps = (): DailyCaps => ({
+  siteRenders: rendersPerDay(),
+  siteVideos: videosPerDay(),
+  brandRenders: Number(process.env.BRAND_RENDERS_PER_DAY ?? 3),
+  brandVideos: Number(process.env.BRAND_VIDEOS_PER_DAY ?? 1),
+});
+/** Today's counts: site-wide in usage/{day}, per brand in usage/{day}/brands/{uid}. */
+const usageRefs = (brandUid: string) => {
+  const site = db().collection("usage").doc(day());
+  return { site, brand: site.collection("brands").doc(brandUid) };
+};
+const counts = (d: FirebaseFirestore.DocumentData | undefined): DailyUsage => ({ renders: Number(d?.renders ?? 0), videos: Number(d?.videos ?? 0) });
 export const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
 
 export type RenderDoc = {
@@ -89,8 +101,10 @@ export async function preflight(brandUid: string, licenceId: string, type: "imag
   const price = priceOf ? priceOf(l) : type === "video" ? l.pricePerVideo : l.pricePerImage;
   const bal = Number((await db().collection("credits").doc(brandUid).get()).data()?.balance ?? 0);
   if (bal < price) throw new RenderRefused(402, `not enough demo credits: this ${type} costs ${price}, you have ${bal}`);
-  const used = Number((await db().collection("usage").doc(day()).get()).data()?.renders ?? 0);
-  if (used >= rendersPerDay()) throw new RenderRefused(429, `the site's daily render limit (${rendersPerDay()}) is reached; try again after 00:00 UTC`);
+  const refs = usageRefs(brandUid);
+  const [site, brand] = await Promise.all([refs.site.get(), refs.brand.get()]);
+  const capped = capRefusal(type, counts(site.data()), counts(brand.data()), dailyCaps());
+  if (capped) throw new RenderRefused(429, capped);
   return { licence: l, price };
 }
 
@@ -166,17 +180,18 @@ export async function settle(input: {
     const lref = db().collection("licences").doc(l0.id);
     const bref = db().collection("credits").doc(l0.brandId);
     const cref = db().collection("credits").doc(l0.creatorId);
-    const uref = db().collection("usage").doc(day());
-    const [ls, bs, cs] = await Promise.all([tx.get(lref), tx.get(bref), tx.get(cref)]);
+    const { site: uref, brand: buref } = usageRefs(l0.brandId);
+    const [ls, bs, cs, us, bus] = await Promise.all([tx.get(lref), tx.get(bref), tx.get(cref), tx.get(uref), tx.get(buref)]);
     const l = withVideoDefaults(ls.data() as LicenceDoc);
     const status = licenceStatus(l);
     if (status !== "Active") throw new RenderRefused(409, `render refused: the licence became ${status.toLowerCase()} during the render`);
     if (l.renderCount !== l0.renderCount) throw new RenderRefused(409, "another render on this licence finished first; try again");
     const bal = Number(bs.data()?.balance ?? 0);
     if (bal < price) throw new RenderRefused(402, "not enough demo credits");
+    const capped = capRefusal(input.type, counts(us.data()), counts(bus.data()), dailyCaps());
+    if (capped) throw new RenderRefused(429, capped);
     if (input.type === "video") {
-      const today = Number((await tx.get(uref)).data()?.videos ?? 0);
-      const why = videoRefusal(l, today, videosPerDay());
+      const why = videoRefusal(l, counts(us.data()).videos, videosPerDay());
       if (why) throw new RenderRefused(409, `render refused: ${why}`);
     }
     tx.update(lref, { renderCount: l.renderCount + 1, ...(input.type === "video" ? { videoCount: (l.videoCount ?? 0) + 1 } : {}) });
@@ -187,7 +202,9 @@ export async function settle(input: {
       tx.create(db().collection("ledger").doc(), { uid: l0.creatorId, delta: creatorShare, reason: `${input.type} render by ${l0.brandName} (after ${fee} credit fee)`, renderId: render.id, licenceId: l0.id, at: Date.now() });
       tx.create(db().collection("ledger").doc(), { uid: "platform", delta: fee, reason: `10% fee on render ${render.id}`, renderId: render.id, at: Date.now() });
     }
-    tx.set(uref, { renders: FieldValue.increment(1), ...(input.type === "video" ? { videos: FieldValue.increment(1) } : {}) }, { merge: true });
+    const inc = { renders: FieldValue.increment(1), ...(input.type === "video" ? { videos: FieldValue.increment(1) } : {}) };
+    tx.set(uref, inc, { merge: true });
+    tx.set(buref, inc, { merge: true });
     tx.create(db().collection("renders").doc(render.id), render);
     tx.create(db().collection("receipts").doc(sha256), { ...receipt, renderId: render.id });
   });
