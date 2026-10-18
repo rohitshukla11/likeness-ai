@@ -309,21 +309,6 @@ Full steps: [docs/deploy-gcp.md](docs/deploy-gcp.md).
 - `web/components/`: the UI.
 - `docs/deploy-gcp.md`: deployment.
 
-## Disclosures
-
-- **Earlier versions:** earlier web3 versions of Likeness were entered in Colosseum, Monad Metropolis
-  and Arc Microgrants. Likeness won Monad Blitz Pune V3. This repository keeps that history.
-- **This edition:** we re-architected Likeness on Google Cloud during the AI Builder Cup (from commit
-  `a7cbf9d`, 16 October 2026). It has no blockchain, wallets or tokens. Identity comes from Google
-  sign-in and YouTube, generation from Vertex AI, and records from Firestore and Cloud KMS.
-- **AI assistance:** we wrote this code with AI coding assistance (Claude Code), and we directed and
-  reviewed it ourselves.
-- **Third-party models:**
-  - YuNet (OpenCV Zoo, MIT weights, trained on WIDER FACE).
-  - AuraFace v1 (fal, Apache-2.0).
-  - MediaPipe Face Landmarker (Apache-2.0).
-- **Demo data:** synthetic demo creators only, labelled as such. Payments are demo credits.
-
 ## Licence
 
 [MIT](LICENSE)
