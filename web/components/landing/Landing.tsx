@@ -15,7 +15,7 @@ import { reason, signIn } from "@/lib/client/firebase";
 import { pillClass } from "@/components/ds";
 import { IconArrowLeft, IconArrowRight, IconChevron } from "@/components/ds/icons";
 import { useCountUp, useInView } from "@/components/ds/motion";
-import { BUILT_ON, EVALUATOR_HINT, MEASUREMENTS, TESTIMONIALS } from "@/lib/site-content";
+import { BUILT_ON, MEASUREMENTS, TESTIMONIALS } from "@/lib/site-content";
 
 
 const RIBBON_A = ["Advertising", "✳", "Social", "✳", "Editorial", "✳", "Entertainment", "✳", "Product", "✳"];
@@ -131,10 +131,6 @@ function Hero() {
         <Ribbon words={RIBBON_A} dir="l" className="top-[236px] z-10 bg-violet text-white sm:top-[476px]" style={{ transform: "rotate(4deg)" }} />
         <Ribbon words={RIBBON_B} dir="r" className="top-[266px] z-10 bg-[#4C5230] text-white sm:top-[514px]" style={{ transform: "rotate(-3deg)" }} />
       </div>
-
-      <p className="relative mx-auto mt-10 max-w-[860px] rounded-[18px] bg-white/80 px-5 py-3 text-center text-[14px] leading-relaxed text-ink sm:text-[15px]">
-        <b>Evaluators:</b> {EVALUATOR_HINT}
-      </p>
 
       <div className="relative mx-auto flex max-w-[1180px] flex-wrap items-center justify-center gap-x-[clamp(24px,4.4vw,64px)] gap-y-3 px-4 pb-8 pt-12 text-[clamp(15px,1.4vw,18px)] font-semibold text-[#5F636B] sm:px-8">
         <span className="text-[13px] font-medium text-[#5F636B]">Built on</span>
